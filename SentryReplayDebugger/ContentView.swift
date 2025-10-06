@@ -30,10 +30,9 @@ struct ContentView: View {
     @State private var currentSearchIndex: Int = 0
     @FocusState private var searchFieldFocused: Bool
 
-    // Performance: Cache for allEvents
+    // Performance: Cache for allEvents (always chronologically sorted for HTML renderer)
     @State private var cachedAllEvents: [ReplayEvent] = []
     @State private var cachedAllEventsSegmentCount: Int = 0
-    @State private var cachedAllEventsSortOrder: Bool = true
 
     // Performance: Pre-computed segment boundaries
     @State private var segmentBoundaries: [Int] = []
@@ -191,10 +190,6 @@ struct ContentView: View {
                 selectedSegment = filteredSegments.first
                 selectedEvent = displayedSegment?.events(useSortedOrder: useSortedOrder).first
             }
-        }
-        .onChange(of: useSortedOrder) {
-            // Update event cache when sort order changes
-            updateEventCache()
         }
         .onChange(of: selectedEventTypeFilter) {
             updateSelectedSegmentAfterFilter()
@@ -432,10 +427,11 @@ struct ContentView: View {
     }
 
     /// Update cache and segment boundaries
+    /// Note: Always uses sorted (chronological) order for HTML rendering correctness
     private func updateEventCache() {
-        cachedAllEvents = segments.flatMap { $0.events(useSortedOrder: useSortedOrder) }
+        // HTML renderer MUST use chronologically sorted events
+        cachedAllEvents = segments.flatMap { $0.sortedEvents }
         cachedAllEventsSegmentCount = segments.count
-        cachedAllEventsSortOrder = useSortedOrder
 
         // Also update segment boundaries and event type indices
         var boundaries: [Int] = [0]
@@ -444,7 +440,8 @@ struct ContentView: View {
         var metas: [Int] = []
 
         for segment in segments {
-            let events = segment.events(useSortedOrder: useSortedOrder)
+            // Always use sorted events for HTML renderer
+            let events = segment.sortedEvents
 
             // Build indices for FullSnapshot and Meta events
             for (localIndex, event) in events.enumerated() {
@@ -466,6 +463,7 @@ struct ContentView: View {
     }
 
     /// Global index of the selected event in the flattened events array
+    /// Note: Uses sortedEvents to match the allEvents array used by HTML renderer
     private var selectedEventGlobalIndex: Int? {
         guard let selectedEvent = selectedEvent,
               let selectedSegment = selectedSegment else {
@@ -477,9 +475,10 @@ struct ContentView: View {
             return nil
         }
 
-        // Find the event's position within the original segment
-        let originalSegmentEvents = segments[originalSegmentIndex].events(useSortedOrder: useSortedOrder)
-        guard let eventIndexInSegment = originalSegmentEvents.firstIndex(where: { $0.id == selectedEvent.id }) else {
+        // Find the event's position within the sorted segment events
+        // Must use sortedEvents to match allEvents which always uses sorted order
+        let originalSegmentEvents = segments[originalSegmentIndex].sortedEvents
+        guard let eventIndexInSegment = originalSegmentEvents.firstIndex(where: { $0.id == selectedEvent.id && $0.timestamp == selectedEvent.timestamp }) else {
             return nil
         }
 
