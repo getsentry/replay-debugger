@@ -116,18 +116,32 @@ struct ContentView: View {
     }
     
     private var filteredSegments: [ReplaySegment] {
+        // Early return if no filters are active
+        let hasEventTypeFilters = enabledEventTypes.count < allEventTypes.count
+        let hasIncrementalSourceFilters = enabledIncrementalSources.count < incrementalSourceTypes.count
+        let hasTimestampFilter = parsedTimestampFilter != nil
+
+        if !hasEventTypeFilters && !hasIncrementalSourceFilters && !hasTimestampFilter {
+            return segments
+        }
+
         return segments.map { segment in
             let filteredEvents = segment.sortedEvents.filter { event in
                 // Apply event type filter - only show events whose type is enabled
-                let baseType = ContentView.baseTypeName(for: event.type)
-                if !enabledEventTypes.contains(baseType) {
-                    return false
+                if hasEventTypeFilters {
+                    let baseType = ContentView.baseTypeName(for: event.type)
+                    if !enabledEventTypes.contains(baseType) {
+                        return false
+                    }
                 }
 
                 // Apply IncrementalSnapshot source filter if this is an IncrementalSnapshot
-                if event.type == 3, let source = event.data["source"] as? Int {
-                    if !enabledIncrementalSources.contains(source) {
-                        return false
+                // Only check if some sources are disabled
+                if hasIncrementalSourceFilters && event.type == 3 {
+                    if let source = event.data["source"] as? Int {
+                        if !enabledIncrementalSources.contains(source) {
+                            return false
+                        }
                     }
                 }
 
