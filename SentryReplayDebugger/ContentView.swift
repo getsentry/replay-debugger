@@ -41,6 +41,10 @@ struct ContentView: View {
     @State private var fullSnapshotIndices: [Int] = []
     @State private var metaIndices: [Int] = []
 
+    // Performance: Event-based RenderState caching (shared across all HTML renderers)
+    @State private var htmlRenderStateCache: [Int: RRWebEventProcessor.RenderState] = [:]
+    private let cacheInterval: Int = 250
+
     func setTimestampFilter(_ timestamp: Date) {
         timestampFilterValue = String(format: "%.3f", timestamp.timeIntervalSince1970)
     }
@@ -183,6 +187,9 @@ struct ContentView: View {
             }
         }
         .onChange(of: segments) {
+            // Clear render state cache when data changes
+            htmlRenderStateCache = [:]
+
             // Update event cache when segments change
             updateEventCache()
 
@@ -397,7 +404,9 @@ struct ContentView: View {
                                 events: allEvents,
                                 selectedEventIndex: eventIndex,
                                 fullSnapshotIndices: fullSnapshotIndices,
-                                metaIndices: metaIndices
+                                metaIndices: metaIndices,
+                                renderStateCache: $htmlRenderStateCache,
+                                cacheInterval: cacheInterval
                             )
                             .frame(minHeight: 100)
                         } else {
@@ -1049,7 +1058,9 @@ struct ContentView: View {
                                 events: allEvents,
                                 selectedEventIndex: eventIndex,
                                 fullSnapshotIndices: fullSnapshotIndices,
-                                metaIndices: metaIndices
+                                metaIndices: metaIndices,
+                                renderStateCache: $htmlRenderStateCache,
+                                cacheInterval: cacheInterval
                             )
                             .frame(minWidth: 300)
                         } else {

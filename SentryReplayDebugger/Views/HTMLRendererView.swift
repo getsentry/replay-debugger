@@ -6,6 +6,8 @@ struct HTMLRenderPanel: View {
     let selectedEventIndex: Int
     let fullSnapshotIndices: [Int]
     let metaIndices: [Int]
+    @Binding var renderStateCache: [Int: RRWebEventProcessor.RenderState]
+    let cacheInterval: Int
     let panelId: String = UUID().uuidString
     @State private var showSource: Bool = false
 
@@ -33,6 +35,8 @@ struct HTMLRenderPanel: View {
                 selectedEventIndex: selectedEventIndex,
                 fullSnapshotIndices: fullSnapshotIndices,
                 metaIndices: metaIndices,
+                renderStateCache: $renderStateCache,
+                cacheInterval: cacheInterval,
                 panelId: panelId,
                 showSource: $showSource
             )
@@ -45,6 +49,8 @@ struct HTMLRendererView: View {
     let selectedEventIndex: Int
     let fullSnapshotIndices: [Int]
     let metaIndices: [Int]
+    @Binding var renderStateCache: [Int: RRWebEventProcessor.RenderState]
+    let cacheInterval: Int
     let panelId: String
     @Binding var showSource: Bool
     @State private var renderState: RRWebEventProcessor.RenderState = RRWebEventProcessor.RenderState()
@@ -130,12 +136,44 @@ struct HTMLRendererView: View {
         }
 
         let selectedEvent = events[targetIndex]
-        NSLog("🎬 [\(panelId.prefix(8))] processEvents - targetIndex: \(targetIndex), event: \(selectedEvent.id), lastProcessedIndex: \(lastProcessedIndex?.description ?? "nil")")
+        NSLog("🎬 [\(panelId.prefix(8))] processEvents - targetIndex: \(targetIndex), event: \(selectedEvent.id), lastProcessedIndex: \(lastProcessedIndex?.description ?? "nil"), cache size: \(renderStateCache.count)")
 
-        // Determine if we can do incremental update or need full re-render
+        // STRATEGY 1: Try cache checkpoint (fastest)
+        if let (checkpointIndex, cachedState) = findNearestCheckpoint(before: targetIndex) {
+            if checkpointIndex == targetIndex {
+                // Exact cache hit
+                NSLog("🎯 [\(panelId.prefix(8))] Cache hit at \(targetIndex)")
+                renderState = cachedState
+                lastProcessedIndex = targetIndex
+                return
+            } else {
+                // Incremental from checkpoint
+                let distance = targetIndex - checkpointIndex
+                NSLog("📦 [\(panelId.prefix(8))] Loading checkpoint \(checkpointIndex), +\(distance) events to \(targetIndex)")
+
+                let state = RRWebEventProcessor.processEventsIncremental(
+                    events,
+                    from: checkpointIndex + 1,
+                    to: targetIndex,
+                    startingState: cachedState
+                )
+
+                if state.html != nil {
+                    NSLog("✅ [\(panelId.prefix(8))] Incremental from checkpoint success")
+                    renderState = state
+                    lastProcessedIndex = targetIndex
+                    saveCheckpointIfNeeded(at: targetIndex, state: state)
+                    return
+                }
+                // Fall through to next strategy if failed
+                NSLog("⚠️ [\(panelId.prefix(8))] Incremental from checkpoint failed, trying FullSnapshot")
+            }
+        }
+
+        // STRATEGY 2: Try incremental from current state
         if let lastIndex = lastProcessedIndex, targetIndex > lastIndex, renderState.domTree != nil {
-            // Incremental update: only process events from lastIndex+1 to targetIndex
-            NSLog("⚡️ [\(panelId.prefix(8))] Incremental render from \(lastIndex + 1) to \(targetIndex)")
+            let distance = targetIndex - lastIndex
+            NSLog("⚡️ [\(panelId.prefix(8))] Incremental render from \(lastIndex + 1) to \(targetIndex) (\(distance) events)")
             let state = RRWebEventProcessor.processEventsIncremental(
                 events,
                 from: lastIndex + 1,
@@ -143,42 +181,40 @@ struct HTMLRendererView: View {
                 startingState: renderState
             )
 
-            if state.html == nil {
-                error = "Failed to process incremental events"
-                NSLog("❌ [\(panelId.prefix(8))] Incremental render failed")
-            } else {
-                let oldHTML = renderState.html
-                NSLog("✅ [\(panelId.prefix(8))] Incremental render success, HTML length: \(state.html?.count ?? 0), HTML changed: \(oldHTML != state.html)")
+            if state.html != nil {
+                NSLog("✅ [\(panelId.prefix(8))] Incremental render success")
                 renderState = state
                 lastProcessedIndex = targetIndex
+                saveCheckpointIfNeeded(at: targetIndex, state: state)
+                return
             }
+            // Fall through to FullSnapshot if failed
+            NSLog("⚠️ [\(panelId.prefix(8))] Incremental render failed, trying FullSnapshot")
+        }
+
+        // STRATEGY 3: Full render from FullSnapshot (fallback)
+        let fullSnapshotIndex = findMostRecentIndex(in: fullSnapshotIndices, before: targetIndex)
+        let searchUpTo = fullSnapshotIndex ?? targetIndex
+        let metaIndex = findMostRecentIndex(in: metaIndices, before: searchUpTo)
+        let startIndex = fullSnapshotIndex ?? 0
+        let reason = lastProcessedIndex == nil ? "initial" : "backward/reset"
+
+        if let fsIndex = fullSnapshotIndex {
+            NSLog("🔄 [\(panelId.prefix(8))] Full render (\(reason)) from FullSnapshot at \(fsIndex) to \(targetIndex) (skipping \(fsIndex) events)")
         } else {
-            // Full re-render: Find most recent FullSnapshot before target using pre-computed indices
-            let fullSnapshotIndex = findMostRecentIndex(in: fullSnapshotIndices, before: targetIndex)
+            NSLog("🔄 [\(panelId.prefix(8))] Full render (\(reason)) from 0 to \(targetIndex) (no FullSnapshot found)")
+        }
 
-            // Find most recent Meta before FullSnapshot or target
-            let searchUpTo = fullSnapshotIndex ?? targetIndex
-            let metaIndex = findMostRecentIndex(in: metaIndices, before: searchUpTo)
+        let state = RRWebEventProcessor.processEvents(events, upToIndex: targetIndex, startFromIndex: startIndex, metaIndex: metaIndex)
 
-            let startIndex = fullSnapshotIndex ?? 0
-            let reason = lastProcessedIndex == nil ? "initial" : "backward/reset"
-
-            if let fsIndex = fullSnapshotIndex {
-                NSLog("🔄 [\(panelId.prefix(8))] Full render (\(reason)) from FullSnapshot at \(fsIndex) to \(targetIndex) (skipping \(fsIndex) events)")
-            } else {
-                NSLog("🔄 [\(panelId.prefix(8))] Full render (\(reason)) from 0 to \(targetIndex) (no FullSnapshot found)")
-            }
-
-            let state = RRWebEventProcessor.processEvents(events, upToIndex: targetIndex, startFromIndex: startIndex, metaIndex: metaIndex)
-
-            if state.html == nil {
-                error = "No HTML generated. Make sure there's a FullSnapshot event before the selected event."
-                NSLog("❌ [\(panelId.prefix(8))] Full render failed")
-            } else {
-                NSLog("✅ [\(panelId.prefix(8))] Full render success, HTML length: \(state.html?.count ?? 0)")
-                renderState = state
-                lastProcessedIndex = targetIndex
-            }
+        if state.html == nil {
+            error = "No HTML generated. Make sure there's a FullSnapshot event before the selected event."
+            NSLog("❌ [\(panelId.prefix(8))] Full render failed")
+        } else {
+            NSLog("✅ [\(panelId.prefix(8))] Full render success, HTML length: \(state.html?.count ?? 0)")
+            renderState = state
+            lastProcessedIndex = targetIndex
+            saveCheckpointIfNeeded(at: targetIndex, state: state)
         }
     }
 
@@ -205,6 +241,47 @@ struct HTMLRendererView: View {
         }
 
         return result
+    }
+
+    /// Find nearest cached checkpoint at or before target index
+    private func findNearestCheckpoint(before index: Int) -> (Int, RRWebEventProcessor.RenderState)? {
+        let validCheckpoints = renderStateCache.keys
+            .filter { $0 <= index }
+            .sorted()
+
+        guard let nearestIndex = validCheckpoints.last,
+              let state = renderStateCache[nearestIndex] else {
+            return nil
+        }
+
+        return (nearestIndex, state)
+    }
+
+    /// Save checkpoint if at interval boundary
+    private func saveCheckpointIfNeeded(at index: Int, state: RRWebEventProcessor.RenderState) {
+        // Calculate checkpoint index (round down to nearest interval)
+        let checkpointIndex = (index / cacheInterval) * cacheInterval
+
+        // Save if:
+        // 1. Exactly at a checkpoint boundary, OR
+        // 2. Within 10 events of a boundary and checkpoint doesn't exist
+        let distanceToCheckpoint = abs(index - checkpointIndex)
+        let shouldSave = distanceToCheckpoint <= 10 && renderStateCache[checkpointIndex] == nil
+
+        if shouldSave {
+            NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(checkpointIndex)")
+            renderStateCache[checkpointIndex] = state
+
+            // Memory management: Keep only 10 most recent checkpoints
+            if renderStateCache.count > 10 {
+                let sortedKeys = renderStateCache.keys.sorted()
+                let keysToRemove = sortedKeys.dropLast(10)
+                for key in keysToRemove {
+                    renderStateCache.removeValue(forKey: key)
+                }
+                NSLog("🗑️ [\(panelId.prefix(8))] Evicted \(keysToRemove.count) old checkpoints")
+            }
+        }
     }
 }
 
