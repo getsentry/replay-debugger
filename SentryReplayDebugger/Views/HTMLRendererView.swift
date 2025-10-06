@@ -57,6 +57,7 @@ struct HTMLRendererView: View {
     @State private var error: String?
     @State private var lastProcessedIndex: Int? = nil
     @State private var isProcessing: Bool = false
+    @State private var isLoadingNewRender: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -75,7 +76,7 @@ struct HTMLRendererView: View {
                         .padding(.horizontal)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if renderState.html == nil {
+            } else if renderState.html == nil || isLoadingNewRender {
                 VStack {
                     ProgressView()
                     Text("Processing events...")
@@ -98,7 +99,7 @@ struct HTMLRendererView: View {
         }
         .task(id: selectedEventIndex) {
             // task(id:) runs once per unique ID, preventing duplicates
-            processEvents(targetIndex: selectedEventIndex)
+            await processEvents(targetIndex: selectedEventIndex)
         }
         .onChange(of: events.count) {
             // Events array changed (e.g., data reloaded), reset state
@@ -107,7 +108,7 @@ struct HTMLRendererView: View {
         }
     }
 
-    private func processEvents(targetIndex: Int) {
+    private func processEvents(targetIndex: Int) async {
         // Prevent duplicate processing
         guard !isProcessing else {
             NSLog("⏭️ [\(panelId.prefix(8))] Skipping duplicate processEvents call for targetIndex: \(targetIndex)")
@@ -121,9 +122,16 @@ struct HTMLRendererView: View {
         }
 
         isProcessing = true
-        defer { isProcessing = false }
+        isLoadingNewRender = true
+        defer {
+            isProcessing = false
+            isLoadingNewRender = false
+        }
 
         error = nil
+
+        // Yield to let the UI update and show the loading spinner
+        await Task.yield()
 
         // Validate inputs
         guard !events.isEmpty else {
@@ -153,22 +161,22 @@ struct HTMLRendererView: View {
                 lastProcessedIndex = targetIndex
                 return
             } else {
-                // Incremental from checkpoint - must copy to avoid mutating cache
+                // Incremental from checkpoint
+                // Note: No need to copy here - processIncrementalWithCheckpoints will handle copying
                 let distance = targetIndex - checkpointIndex
                 NSLog("📦 [\(panelId.prefix(8))] Loading checkpoint \(checkpointIndex), +\(distance) events to \(targetIndex)")
 
-                let state = RRWebEventProcessor.processEventsIncremental(
-                    events,
-                    from: checkpointIndex + 1,
+                let state = processIncrementalWithCheckpoints(
+                    from: checkpointIndex,
                     to: targetIndex,
-                    startingState: cachedState.copy()
+                    startingState: cachedState,
+                    fsIndex: fsIndex
                 )
 
                 if state.html != nil {
                     NSLog("✅ [\(panelId.prefix(8))] Incremental from checkpoint success")
                     renderState = state
                     lastProcessedIndex = targetIndex
-                    saveCheckpointAtBoundaries(from: checkpointIndex, to: targetIndex, finalState: state, fsIndex: fsIndex)
                     return
                 }
                 // Fall through to next strategy if failed
@@ -180,18 +188,17 @@ struct HTMLRendererView: View {
         if let lastIndex = lastProcessedIndex, targetIndex > lastIndex, renderState.domTree != nil {
             let distance = targetIndex - lastIndex
             NSLog("⚡️ [\(panelId.prefix(8))] Incremental render from \(lastIndex + 1) to \(targetIndex) (\(distance) events)")
-            let state = RRWebEventProcessor.processEventsIncremental(
-                events,
-                from: lastIndex + 1,
+            let state = processIncrementalWithCheckpoints(
+                from: lastIndex,
                 to: targetIndex,
-                startingState: renderState
+                startingState: renderState,
+                fsIndex: fsIndex
             )
 
             if state.html != nil {
                 NSLog("✅ [\(panelId.prefix(8))] Incremental render success")
                 renderState = state
                 lastProcessedIndex = targetIndex
-                saveCheckpointAtBoundaries(from: lastIndex, to: targetIndex, finalState: state, fsIndex: fsIndex)
                 return
             }
             // Fall through to FullSnapshot if failed
@@ -322,25 +329,66 @@ struct HTMLRendererView: View {
         return currentState
     }
 
-    /// Save checkpoints at FS-relative boundaries crossed during incremental rendering
-    /// Note: We can't retroactively create exact boundary states, so we only save if very close
-    private func saveCheckpointAtBoundaries(from startIndex: Int, to targetIndex: Int, finalState: RRWebEventProcessor.RenderState, fsIndex: Int) {
-        // Calculate how many events from FS we are at the target
-        let eventsFromFS = targetIndex - fsIndex
-        let remainder = eventsFromFS % cacheInterval
+    /// Process incrementally from startIndex to targetIndex, saving checkpoints at boundaries
+    private func processIncrementalWithCheckpoints(
+        from startIndex: Int,
+        to targetIndex: Int,
+        startingState: RRWebEventProcessor.RenderState,
+        fsIndex: Int
+    ) -> RRWebEventProcessor.RenderState {
+        let totalEvents = targetIndex - startIndex
 
-        // If we ended within 5 events of a FS-relative boundary, save a checkpoint there
-        if remainder <= 5 && eventsFromFS > 0 {
-            let boundaryCount = eventsFromFS / cacheInterval * cacheInterval
-            let boundaryIndex = fsIndex + boundaryCount
+        // If the jump is small (less than one interval), just process directly
+        if totalEvents < cacheInterval {
+            return RRWebEventProcessor.processEventsIncremental(
+                events,
+                from: startIndex + 1,
+                to: targetIndex,
+                startingState: startingState
+            )
+        }
 
-            if boundaryIndex > fsIndex && boundaryIndex <= targetIndex && renderStateCache[boundaryIndex] == nil {
-                NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(boundaryIndex) (\(boundaryCount) events from FS at \(fsIndex), actual target: \(targetIndex))")
-                renderStateCache[boundaryIndex] = finalState.copy()
+        // Large jump: process in chunks and save checkpoints at each boundary
+        var currentState = startingState
+        var currentIndex = startIndex
+
+        // Find the next FS-relative boundary after startIndex
+        let eventsFromFSAtStart = startIndex - fsIndex
+        let nextBoundaryOffset = ((eventsFromFSAtStart / cacheInterval) + 1) * cacheInterval
+        var nextBoundaryIndex = fsIndex + nextBoundaryOffset
+
+        // Process to each boundary
+        while nextBoundaryIndex <= targetIndex {
+            currentState = RRWebEventProcessor.processEventsIncremental(
+                events,
+                from: currentIndex + 1,
+                to: nextBoundaryIndex,
+                startingState: currentState
+            )
+
+            // Save checkpoint at this boundary
+            if currentState.html != nil && renderStateCache[nextBoundaryIndex] == nil {
+                let eventsFromFS = nextBoundaryIndex - fsIndex
+                NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(nextBoundaryIndex) (\(eventsFromFS) events from FS at \(fsIndex))")
+                renderStateCache[nextBoundaryIndex] = currentState.copy()
             }
+
+            currentIndex = nextBoundaryIndex
+            nextBoundaryIndex += cacheInterval
+        }
+
+        // Process remaining events to target
+        if currentIndex < targetIndex {
+            currentState = RRWebEventProcessor.processEventsIncremental(
+                events,
+                from: currentIndex + 1,
+                to: targetIndex,
+                startingState: currentState
+            )
         }
 
         evictOldCheckpoints()
+        return currentState
     }
 
     private func evictOldCheckpoints() {
