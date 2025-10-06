@@ -1,6 +1,83 @@
 import SwiftUI
 import AppKit
 
+/// A split view that automatically persists its divider position
+struct PersistentVSplitView<Top: View, Bottom: View>: NSViewRepresentable {
+    let autosaveName: String
+    let top: Top
+    let bottom: Bottom
+
+    init(autosaveName: String, @ViewBuilder top: () -> Top, @ViewBuilder bottom: () -> Bottom) {
+        self.autosaveName = autosaveName
+        self.top = top()
+        self.bottom = bottom()
+    }
+
+    func makeNSView(context: Context) -> NSSplitView {
+        let splitView = NSSplitView()
+        splitView.isVertical = false
+        splitView.dividerStyle = .thin
+        splitView.autosaveName = NSSplitView.AutosaveName(autosaveName)
+
+        let topHosting = NSHostingView(rootView: top)
+        let bottomHosting = NSHostingView(rootView: bottom)
+
+        splitView.addArrangedSubview(topHosting)
+        splitView.addArrangedSubview(bottomHosting)
+
+        return splitView
+    }
+
+    func updateNSView(_ splitView: NSSplitView, context: Context) {
+        if splitView.arrangedSubviews.count >= 2 {
+            if let topHosting = splitView.arrangedSubviews[0] as? NSHostingView<Top> {
+                topHosting.rootView = top
+            }
+            if let bottomHosting = splitView.arrangedSubviews[1] as? NSHostingView<Bottom> {
+                bottomHosting.rootView = bottom
+            }
+        }
+    }
+}
+
+struct PersistentHSplitView<Left: View, Right: View>: NSViewRepresentable {
+    let autosaveName: String
+    let left: Left
+    let right: Right
+
+    init(autosaveName: String, @ViewBuilder left: () -> Left, @ViewBuilder right: () -> Right) {
+        self.autosaveName = autosaveName
+        self.left = left()
+        self.right = right()
+    }
+
+    func makeNSView(context: Context) -> NSSplitView {
+        let splitView = NSSplitView()
+        splitView.isVertical = true
+        splitView.dividerStyle = .thin
+        splitView.autosaveName = NSSplitView.AutosaveName(autosaveName)
+
+        let leftHosting = NSHostingView(rootView: left)
+        let rightHosting = NSHostingView(rootView: right)
+
+        splitView.addArrangedSubview(leftHosting)
+        splitView.addArrangedSubview(rightHosting)
+
+        return splitView
+    }
+
+    func updateNSView(_ splitView: NSSplitView, context: Context) {
+        if splitView.arrangedSubviews.count >= 2 {
+            if let leftHosting = splitView.arrangedSubviews[0] as? NSHostingView<Left> {
+                leftHosting.rootView = left
+            }
+            if let rightHosting = splitView.arrangedSubviews[1] as? NSHostingView<Right> {
+                rightHosting.rootView = right
+            }
+        }
+    }
+}
+
 struct SearchMatch: Identifiable {
     let id = UUID()
     let segmentId: String
@@ -425,59 +502,73 @@ struct ContentView: View {
     }
 
     private var detailContent: some View {
-        Group {
-            if let selectedEvent = selectedEvent {
-                VStack(spacing: 0) {
-                    // Header
-                    HStack(alignment: .center) {
-                        Label("Event Details", systemImage: "doc.text")
-                            .font(.headline)
+        PersistentVSplitView(autosaveName: "main-detail-split") {
+            // Top pane: JSON Inspector
+            Group {
+                if let selectedEvent = selectedEvent {
+                    VStack(spacing: 0) {
+                        // Header
+                        HStack(alignment: .center) {
+                            Text("Event Details")
+                                .font(.headline)
 
-                        Spacer()
+                            Spacer()
 
-                        Text(ContentView.displayName(for: selectedEvent))
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.accentColor.opacity(0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
-                    .padding()
-
-                    // Always show both JSON and HTML in vertical split
-                    VSplitView {
-                        JSONInspectorView(data: selectedEvent.data)
-                            .id(selectedEvent.id)
-                            .frame(minHeight: 100)
-
-                        if let eventIndex = selectedEventGlobalIndex {
-                            HTMLRenderPanel(
-                                events: allEvents,
-                                selectedEventIndex: eventIndex,
-                                fullSnapshotIndices: fullSnapshotIndices,
-                                metaIndices: metaIndices,
-                                renderStateCache: $htmlRenderStateCache,
-                                cacheInterval: cacheInterval
-                            )
-                            .frame(minHeight: 100)
-                        } else {
-                            VStack {
-                                ProgressView()
-                                Text("Loading HTML renderer...")
+                            if let timeFromStart = timeFromStart(for: selectedEvent) {
+                                Text(timeFromStart)
                                     .font(.caption)
+                                    .monospacedDigit()
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.secondary.opacity(0.15))
                                     .foregroundColor(.secondary)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
                             }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                            Text(ContentView.displayName(for: selectedEvent))
+                                .font(.caption)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.secondary.opacity(0.15))
+                                .foregroundColor(.secondary)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
                         }
+                        .padding()
+
+                        JSONInspectorView(data: selectedEvent.data)
                     }
+                } else {
+                    ContentUnavailableView(
+                        "No Event Selected",
+                        systemImage: "calendar.badge.clock",
+                        description: Text("Select an event to view its details")
+                    )
                 }
-            } else {
-                ContentUnavailableView(
-                    "No Event Selected",
-                    systemImage: "calendar.badge.clock",
-                    description: Text("Select an event to view its details")
-                )
             }
+            .frame(minHeight: 100)
+        } bottom: {
+            // Bottom pane: HTML Renderer
+            Group {
+                if let eventIndex = selectedEventGlobalIndex {
+                    HTMLRenderPanel(
+                        events: allEvents,
+                        selectedEventIndex: eventIndex,
+                        fullSnapshotIndices: fullSnapshotIndices,
+                        metaIndices: metaIndices,
+                        renderStateCache: $htmlRenderStateCache,
+                        cacheInterval: cacheInterval
+                    )
+                } else {
+                    VStack {
+                        ProgressView()
+                        Text("Loading HTML renderer...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .frame(minHeight: 100)
         }
     }
 
@@ -658,6 +749,19 @@ struct ContentView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(isError ? Color.red.opacity(0.1) : Color.blue.opacity(0.1))
+    }
+
+    private func timeFromStart(for event: ReplayEvent) -> String? {
+        guard !allEvents.isEmpty else { return nil }
+        let firstEvent = allEvents[0]
+        let timeDiff = event.timestamp.timeIntervalSince(firstEvent.timestamp)
+
+        // Format as +MM:SS.mmm
+        let minutes = Int(timeDiff) / 60
+        let seconds = Int(timeDiff) % 60
+        let milliseconds = Int((timeDiff.truncatingRemainder(dividingBy: 1)) * 1000)
+
+        return String(format: "+%02d:%02d.%03d", minutes, seconds, milliseconds)
     }
 
     private func updateSelectedSegmentAfterFilter() {
@@ -1123,35 +1227,67 @@ struct ContentView: View {
                     }
                 }
                 .frame(minWidth: 280, idealWidth: 300, maxWidth: 450)
-                
-                if let selectedEvent = selectedEvent,
-                   selectedEvent.type != 5 {
-                    // Non-Custom event - show both JSON and HTML
-                    HSplitView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            HStack(alignment: .center) {
-                                Text("Event Details")
-                                    .font(.headline)
 
-                                Spacer()
+                // Always show HSplitView to preserve split position
+                PersistentHSplitView(autosaveName: "inspector-detail-split") {
+                    // Left pane: JSON Inspector
+                    Group {
+                        if let selectedEvent = selectedEvent {
+                            VStack(alignment: .leading, spacing: 0) {
+                                HStack(alignment: .center) {
+                                    Text("Event Details")
+                                        .font(.headline)
 
-                                Text(ContentView.displayName(for: selectedEvent))
-                                    .font(.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.blue.opacity(0.2))
-                                    .cornerRadius(4)
-                            }
-                            .frame(height: 44)
-                            .padding(.horizontal, 16)
+                                    Spacer()
 
-                            JSONInspectorView(data: selectedEvent.data)
-                                .id(selectedEvent.id)
+                                    if let timeFromStart = timeFromStart(for: selectedEvent) {
+                                        Text(timeFromStart)
+                                            .font(.caption)
+                                            .monospacedDigit()
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(Color.secondary.opacity(0.15))
+                                            .foregroundColor(.secondary)
+                                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                                    }
+
+                                    Text(ContentView.displayName(for: selectedEvent))
+                                        .font(.caption)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.secondary.opacity(0.15))
+                                        .foregroundColor(.secondary)
+                                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                                }
+                                .frame(height: 44)
                                 .padding(.horizontal, 16)
-                        }
-                        .frame(minWidth: 300)
 
-                        if let eventIndex = selectedEventGlobalIndex {
+                                JSONInspectorView(data: selectedEvent.data)
+                                    .padding(.horizontal, 16)
+                            }
+                        } else {
+                            VStack {
+                                Image(systemName: "curlybraces")
+                                    .font(.largeTitle)
+                                    .foregroundColor(.secondary)
+                                Text("No Event Selected")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                Text("Select an event to view its JSON data")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                    }
+                    .frame(minWidth: 300)
+                } right: {
+                    // Right pane: HTML Renderer (hidden for custom events)
+                    Group {
+                        if let selectedEvent = selectedEvent, selectedEvent.type == 5 {
+                            // Custom event - hide HTML panel
+                            EmptyView()
+                        } else if let eventIndex = selectedEventGlobalIndex {
                             HTMLRenderPanel(
                                 events: allEvents,
                                 selectedEventIndex: eventIndex,
@@ -1160,7 +1296,6 @@ struct ContentView: View {
                                 renderStateCache: $htmlRenderStateCache,
                                 cacheInterval: cacheInterval
                             )
-                            .frame(minWidth: 300)
                         } else {
                             VStack {
                                 ProgressView()
@@ -1171,43 +1306,7 @@ struct ContentView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                     }
-                } else if let selectedEvent = selectedEvent {
-                    // Custom event (type 5) - show only JSON
-                    VStack(alignment: .leading, spacing: 0) {
-                        HStack(alignment: .center) {
-                            Text("Event Details")
-                                .font(.headline)
-
-                            Spacer()
-
-                            Text(ContentView.displayName(for: selectedEvent))
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.2))
-                                .cornerRadius(4)
-                        }
-                        .frame(height: 44)
-                        .padding(.horizontal, 16)
-
-                        JSONInspectorView(data: selectedEvent.data)
-                            .id(selectedEvent.id)
-                            .padding(.horizontal, 16)
-                    }
-                    .frame(minWidth: 300, maxWidth: .infinity)
-                } else {
-                    VStack {
-                        Image(systemName: "curlybraces")
-                            .font(.largeTitle)
-                            .foregroundColor(.secondary)
-                        Text("No Event Selected")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                        Text("Select an event to view its JSON data")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(minWidth: 300)
                 }
             }
         } else {
