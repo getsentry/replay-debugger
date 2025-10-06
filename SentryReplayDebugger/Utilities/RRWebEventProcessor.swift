@@ -13,6 +13,16 @@ struct RRWebEventProcessor {
         var html: String? {
             return domTree?.toHTML()
         }
+
+        /// Create a deep copy of this RenderState
+        func copy() -> RenderState {
+            var copied = RenderState()
+            copied.domTree = domTree?.copy()
+            copied.viewportWidth = viewportWidth
+            copied.viewportHeight = viewportHeight
+            copied.href = href
+            return copied
+        }
     }
 
     /// Processes events up to and including the target event index
@@ -72,7 +82,9 @@ struct RRWebEventProcessor {
         to toIndex: Int,
         startingState: RenderState
     ) -> RenderState {
-        var state = startingState
+        // CRITICAL: Must deep copy to avoid mutating the input state
+        // struct copy is shallow - domTree reference would be shared!
+        var state = startingState.copy()
 
         // Validate indices
         guard fromIndex >= 0,

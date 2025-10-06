@@ -136,18 +136,24 @@ struct HTMLRendererView: View {
         }
 
         let selectedEvent = events[targetIndex]
-        NSLog("🎬 [\(panelId.prefix(8))] processEvents - targetIndex: \(targetIndex), event: \(selectedEvent.id), lastProcessedIndex: \(lastProcessedIndex?.description ?? "nil"), cache size: \(renderStateCache.count)")
+
+        // First, find the FullSnapshot we'll be using (checkpoint must be after this)
+        let fullSnapshotIndex = findMostRecentIndex(in: fullSnapshotIndices, before: targetIndex)
+        let fsIndex = fullSnapshotIndex ?? 0
+
+        NSLog("🎬 [\(panelId.prefix(8))] processEvents - targetIndex: \(targetIndex), event: \(selectedEvent.id), FS: \(fsIndex), cache size: \(renderStateCache.count)")
 
         // STRATEGY 1: Try cache checkpoint (fastest)
-        if let (checkpointIndex, cachedState) = findNearestCheckpoint(before: targetIndex) {
+        // Only use checkpoints that are AFTER the FullSnapshot we'll be using
+        if let (checkpointIndex, cachedState) = findNearestCheckpoint(after: fsIndex, before: targetIndex) {
             if checkpointIndex == targetIndex {
-                // Exact cache hit
+                // Exact cache hit - must copy to avoid mutating cache
                 NSLog("🎯 [\(panelId.prefix(8))] Cache hit at \(targetIndex)")
-                renderState = cachedState
+                renderState = cachedState.copy()
                 lastProcessedIndex = targetIndex
                 return
             } else {
-                // Incremental from checkpoint
+                // Incremental from checkpoint - must copy to avoid mutating cache
                 let distance = targetIndex - checkpointIndex
                 NSLog("📦 [\(panelId.prefix(8))] Loading checkpoint \(checkpointIndex), +\(distance) events to \(targetIndex)")
 
@@ -155,14 +161,14 @@ struct HTMLRendererView: View {
                     events,
                     from: checkpointIndex + 1,
                     to: targetIndex,
-                    startingState: cachedState
+                    startingState: cachedState.copy()
                 )
 
                 if state.html != nil {
                     NSLog("✅ [\(panelId.prefix(8))] Incremental from checkpoint success")
                     renderState = state
                     lastProcessedIndex = targetIndex
-                    saveCheckpointAtBoundaries(from: checkpointIndex, to: targetIndex, finalState: state)
+                    saveCheckpointAtBoundaries(from: checkpointIndex, to: targetIndex, finalState: state, fsIndex: fsIndex)
                     return
                 }
                 // Fall through to next strategy if failed
@@ -185,7 +191,7 @@ struct HTMLRendererView: View {
                 NSLog("✅ [\(panelId.prefix(8))] Incremental render success")
                 renderState = state
                 lastProcessedIndex = targetIndex
-                saveCheckpointAtBoundaries(from: lastIndex, to: targetIndex, finalState: state)
+                saveCheckpointAtBoundaries(from: lastIndex, to: targetIndex, finalState: state, fsIndex: fsIndex)
                 return
             }
             // Fall through to FullSnapshot if failed
@@ -193,7 +199,6 @@ struct HTMLRendererView: View {
         }
 
         // STRATEGY 3: Full render from FullSnapshot (fallback)
-        let fullSnapshotIndex = findMostRecentIndex(in: fullSnapshotIndices, before: targetIndex)
         let searchUpTo = fullSnapshotIndex ?? targetIndex
         let metaIndex = findMostRecentIndex(in: metaIndices, before: searchUpTo)
         let startIndex = fullSnapshotIndex ?? 0
@@ -243,10 +248,10 @@ struct HTMLRendererView: View {
         return result
     }
 
-    /// Find nearest cached checkpoint at or before target index
-    private func findNearestCheckpoint(before index: Int) -> (Int, RRWebEventProcessor.RenderState)? {
+    /// Find nearest cached checkpoint after FullSnapshot and before target index
+    private func findNearestCheckpoint(after fsIndex: Int, before targetIndex: Int) -> (Int, RRWebEventProcessor.RenderState)? {
         let validCheckpoints = renderStateCache.keys
-            .filter { $0 <= index }
+            .filter { $0 > fsIndex && $0 <= targetIndex }
             .sorted()
 
         guard let nearestIndex = validCheckpoints.last,
@@ -254,59 +259,84 @@ struct HTMLRendererView: View {
             return nil
         }
 
+        let eventsFromFS = nearestIndex - fsIndex
+        NSLog("📍 [\(panelId.prefix(8))] Found checkpoint at \(nearestIndex) (\(eventsFromFS) events from FS at \(fsIndex))")
+
         return (nearestIndex, state)
     }
 
-    /// Process events and save checkpoints at interval boundaries
+    /// Process events and save checkpoints at FS-relative interval boundaries
     private func processWithCheckpoints(upToIndex targetIndex: Int, startFromIndex startIndex: Int, metaIndex: Int?) -> RRWebEventProcessor.RenderState {
-        // Start with basic processing to get initial state
-        var state = RRWebEventProcessor.processEvents(events, upToIndex: startIndex, startFromIndex: startIndex, metaIndex: metaIndex)
+        let eventsFromFS = targetIndex - startIndex
 
-        // Calculate which checkpoint boundaries we'll cross
-        let firstCheckpoint = ((startIndex / cacheInterval) + 1) * cacheInterval
+        // Calculate how many complete boundaries we'll cross
+        let numBoundaries = eventsFromFS / cacheInterval
 
-        if firstCheckpoint > targetIndex {
-            // No checkpoints to cross, just process to target
+        // If we won't cross any boundaries, just process to target
+        if numBoundaries == 0 {
             return RRWebEventProcessor.processEvents(events, upToIndex: targetIndex, startFromIndex: startIndex, metaIndex: metaIndex)
         }
 
-        var currentIndex = startIndex
-        var currentState = state
+        // Process to first checkpoint boundary (FS + cacheInterval)
+        let firstBoundaryIndex = startIndex + cacheInterval
+        var currentState = RRWebEventProcessor.processEvents(events, upToIndex: firstBoundaryIndex, startFromIndex: startIndex, metaIndex: metaIndex)
+        var currentIndex = firstBoundaryIndex
 
-        // Process to each checkpoint boundary incrementally
-        for checkpoint in stride(from: firstCheckpoint, through: targetIndex, by: cacheInterval) {
-            // Process from current position to checkpoint
-            currentState = RRWebEventProcessor.processEvents(events, upToIndex: checkpoint, startFromIndex: startIndex, metaIndex: metaIndex)
+        if currentState.html != nil && renderStateCache[firstBoundaryIndex] == nil {
+            NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(firstBoundaryIndex) (\(cacheInterval) events from FS at \(startIndex))")
+            renderStateCache[firstBoundaryIndex] = currentState.copy()
+        }
 
-            if currentState.html != nil && renderStateCache[checkpoint] == nil {
-                NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at boundary \(checkpoint)")
-                renderStateCache[checkpoint] = currentState
+        // Process incrementally to each subsequent boundary
+        for boundaryNum in 2...numBoundaries {
+            let boundaryIndex = startIndex + (cacheInterval * boundaryNum)
+            let eventsAtBoundary = cacheInterval * boundaryNum
+
+            // Incremental from current state
+            currentState = RRWebEventProcessor.processEventsIncremental(
+                events,
+                from: currentIndex + 1,
+                to: boundaryIndex,
+                startingState: currentState
+            )
+
+            if currentState.html != nil && renderStateCache[boundaryIndex] == nil {
+                NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(boundaryIndex) (\(eventsAtBoundary) events from FS at \(startIndex))")
+                renderStateCache[boundaryIndex] = currentState.copy()
             }
 
-            currentIndex = checkpoint
+            currentIndex = boundaryIndex
         }
 
         // Process from last checkpoint to target if needed
         if currentIndex < targetIndex {
-            currentState = RRWebEventProcessor.processEvents(events, upToIndex: targetIndex, startFromIndex: startIndex, metaIndex: metaIndex)
+            currentState = RRWebEventProcessor.processEventsIncremental(
+                events,
+                from: currentIndex + 1,
+                to: targetIndex,
+                startingState: currentState
+            )
         }
 
-        // Evict old checkpoints if needed
         evictOldCheckpoints()
-
         return currentState
     }
 
-    /// Save checkpoints at boundaries crossed during incremental rendering
+    /// Save checkpoints at FS-relative boundaries crossed during incremental rendering
     /// Note: We can't retroactively create exact boundary states, so we only save if very close
-    private func saveCheckpointAtBoundaries(from startIndex: Int, to targetIndex: Int, finalState: RRWebEventProcessor.RenderState) {
-        let firstBoundary = ((startIndex / cacheInterval) + 1) * cacheInterval
+    private func saveCheckpointAtBoundaries(from startIndex: Int, to targetIndex: Int, finalState: RRWebEventProcessor.RenderState, fsIndex: Int) {
+        // Calculate how many events from FS we are at the target
+        let eventsFromFS = targetIndex - fsIndex
+        let remainder = eventsFromFS % cacheInterval
 
-        // If we crossed a boundary and ended within 5 events of it, save there
-        for boundary in stride(from: firstBoundary, through: targetIndex, by: cacheInterval) {
-            if abs(targetIndex - boundary) <= 5 && renderStateCache[boundary] == nil {
-                NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at boundary \(boundary) (actual index: \(targetIndex))")
-                renderStateCache[boundary] = finalState
+        // If we ended within 5 events of a FS-relative boundary, save a checkpoint there
+        if remainder <= 5 && eventsFromFS > 0 {
+            let boundaryCount = eventsFromFS / cacheInterval * cacheInterval
+            let boundaryIndex = fsIndex + boundaryCount
+
+            if boundaryIndex > fsIndex && boundaryIndex <= targetIndex && renderStateCache[boundaryIndex] == nil {
+                NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(boundaryIndex) (\(boundaryCount) events from FS at \(fsIndex), actual target: \(targetIndex))")
+                renderStateCache[boundaryIndex] = finalState.copy()
             }
         }
 
@@ -314,14 +344,34 @@ struct HTMLRendererView: View {
     }
 
     private func evictOldCheckpoints() {
+        guard renderStateCache.count > 30 else { return }
+
+        // Find the two most recent FullSnapshots
+        let recentFSIndices = fullSnapshotIndices.suffix(2)
+
+        // Keep checkpoints that come after the second-to-last FullSnapshot
+        // This ensures we keep checkpoints from the last 2 FullSnapshots
+        let cutoffIndex = recentFSIndices.first ?? 0
+
+        let keysToRemove = renderStateCache.keys.filter { $0 < cutoffIndex }
+
+        for key in keysToRemove {
+            renderStateCache.removeValue(forKey: key)
+        }
+
+        if keysToRemove.count > 0 {
+            NSLog("🗑️ [\(panelId.prefix(8))] Evicted \(keysToRemove.count) checkpoints before FS at \(cutoffIndex)")
+        }
+
+        // If still too many, evict oldest ones
         if renderStateCache.count > 30 {
             let sortedKeys = renderStateCache.keys.sorted()
-            let keysToRemove = sortedKeys.dropLast(30)
-            for key in keysToRemove {
+            let additionalKeysToRemove = sortedKeys.dropLast(30)
+            for key in additionalKeysToRemove {
                 renderStateCache.removeValue(forKey: key)
             }
-            if keysToRemove.count > 0 {
-                NSLog("🗑️ [\(panelId.prefix(8))] Evicted \(keysToRemove.count) old checkpoints")
+            if additionalKeysToRemove.count > 0 {
+                NSLog("🗑️ [\(panelId.prefix(8))] Evicted \(additionalKeysToRemove.count) additional old checkpoints")
             }
         }
     }

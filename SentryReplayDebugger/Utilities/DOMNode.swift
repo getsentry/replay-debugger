@@ -30,6 +30,11 @@ class DOMNode {
 
         return nil
     }
+
+    /// Create a deep copy of this node
+    func copy() -> DOMNode {
+        fatalError("copy() must be implemented by subclass")
+    }
 }
 
 /// Base class for nodes that can contain children
@@ -76,6 +81,15 @@ class DOMDocumentNode: DOMContainerNode {
     override func toHTML() -> String {
         return childNodes.map { $0.toHTML() }.joined()
     }
+
+    override func copy() -> DOMNode {
+        let copied = DOMDocumentNode(id: id)
+        for child in childNodes {
+            let copiedChild = child.copy()
+            copied.appendChild(copiedChild)
+        }
+        return copied
+    }
 }
 
 /// DocumentType node (type 1) - <!DOCTYPE html>
@@ -93,6 +107,10 @@ class DOMDocumentTypeNode: DOMNode {
 
     override func toHTML() -> String {
         return "<!DOCTYPE \(name)>"
+    }
+
+    override func copy() -> DOMNode {
+        return DOMDocumentTypeNode(id: id, name: name, publicId: publicId, systemId: systemId)
     }
 }
 
@@ -201,6 +219,23 @@ class DOMElementNode: DOMContainerNode {
         let childrenHTML = childNodes.map { $0.toHTML() }.joined()
         return "<\(tag)\(attrsString)>\(childrenHTML)</\(tag)>"
     }
+
+    override func copy() -> DOMNode {
+        let copied = DOMElementNode(id: id, tagName: tagName, attributes: attributes, isSVG: isSVG)
+
+        // Deep copy cssRules array if it exists
+        if let rules = cssRules {
+            copied.cssRules = rules.map { $0 }
+        }
+
+        // Deep copy children
+        for child in childNodes {
+            let copiedChild = child.copy()
+            copied.appendChild(copiedChild)
+        }
+
+        return copied
+    }
 }
 
 /// Text node (type 3)
@@ -226,12 +261,20 @@ class DOMTextNode: DOMNode {
             .replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;")
     }
+
+    override func copy() -> DOMNode {
+        return DOMTextNode(id: id, textContent: textContent, isStyle: isStyle)
+    }
 }
 
 /// CDATA node (type 4)
 class DOMCDATANode: DOMNode {
     override func toHTML() -> String {
         return ""
+    }
+
+    override func copy() -> DOMNode {
+        return DOMCDATANode(id: id)
     }
 }
 
@@ -246,5 +289,9 @@ class DOMCommentNode: DOMNode {
 
     override func toHTML() -> String {
         return "<!--\(textContent)-->"
+    }
+
+    override func copy() -> DOMNode {
+        return DOMCommentNode(id: id, textContent: textContent)
     }
 }
