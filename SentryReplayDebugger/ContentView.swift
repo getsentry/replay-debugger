@@ -13,8 +13,8 @@ struct ContentView: View {
     @State private var segments: [ReplaySegment] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var selectedEventTypeFilter: String = "All"
-    @State private var invertFilter = false
+    @State private var enabledEventTypes: Set<String> = ["DomContentLoaded", "Load", "FullSnapshot", "IncrementalSnapshot", "Meta", "Custom", "Plugin"]
+    @State private var enabledIncrementalSources: Set<Int> = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     @State private var selectedSegment: ReplaySegment?
     @State private var selectedEvent: ReplayEvent?
     @State private var useSortedOrder = true
@@ -49,8 +49,41 @@ struct ContentView: View {
         timestampFilterValue = String(format: "%.3f", timestamp.timeIntervalSince1970)
     }
     
-    private let eventTypes = ["All", "DomContentLoaded", "Load", "FullSnapshot", "IncrementalSnapshot", "Meta", "Custom", "Plugin"]
-    
+    // Event types ordered by their enum values (0-6)
+    private let allEventTypes = ["DomContentLoaded", "Load", "FullSnapshot", "IncrementalSnapshot", "Meta", "Custom", "Plugin"]
+
+    // IncrementalSnapshot source types ordered by their enum values (0-16)
+    private let incrementalSourceTypes: [(id: Int, name: String)] = [
+        (0, "Mutation"),
+        (1, "MouseMove"),
+        (2, "MouseInteraction"),
+        (3, "Scroll"),
+        (4, "ViewportResize"),
+        (5, "Input"),
+        (6, "TouchMove"),
+        (7, "MediaInteraction"),
+        (8, "StyleSheetRule"),
+        (9, "CanvasMutation"),
+        (10, "Font"),
+        (11, "Log"),
+        (12, "Drag"),
+        (13, "StyleDeclaration"),
+        (14, "Selection"),
+        (15, "AdoptedStyleSheet"),
+        (16, "CustomElement")
+    ]
+
+    private var hasActiveFilters: Bool {
+        // Check if any event types are disabled
+        let allTypesEnabled = enabledEventTypes.count == allEventTypes.count
+        // Check if any incremental sources are disabled
+        let allIncrementalSourcesEnabled = enabledIncrementalSources.count == incrementalSourceTypes.count
+        // Check if timestamp filter is active
+        let hasTimestampFilter = !timestampFilterValue.isEmpty
+
+        return !allTypesEnabled || !allIncrementalSourcesEnabled || hasTimestampFilter
+    }
+
     private var totalSegmentsDuration: String? {
         guard !segments.isEmpty else { return nil }
         
@@ -85,16 +118,19 @@ struct ContentView: View {
     private var filteredSegments: [ReplaySegment] {
         return segments.map { segment in
             let filteredEvents = segment.sortedEvents.filter { event in
-                // Apply event type filter
-                if selectedEventTypeFilter != "All" {
-                    let baseType = ContentView.baseTypeName(for: event.type)
-                    let matches = baseType == selectedEventTypeFilter
-                    let typeMatches = invertFilter ? !matches : matches
-                    if !typeMatches {
+                // Apply event type filter - only show events whose type is enabled
+                let baseType = ContentView.baseTypeName(for: event.type)
+                if !enabledEventTypes.contains(baseType) {
+                    return false
+                }
+
+                // Apply IncrementalSnapshot source filter if this is an IncrementalSnapshot
+                if event.type == 3, let source = event.data["source"] as? Int {
+                    if !enabledIncrementalSources.contains(source) {
                         return false
                     }
                 }
-                
+
                 // Apply timestamp filter
                 if let timestampFilter = parsedTimestampFilter {
                     let eventTimestamp = event.timestamp.timeIntervalSince1970
@@ -108,10 +144,10 @@ struct ContentView: View {
                         }
                     }
                 }
-                
+
                 return true
             }
-            
+
             // Keep segment even if no events match - just show empty event list
             return ReplaySegment(id: segment.id, timestamp: segment.timestamp, events: filteredEvents)
         }
@@ -147,6 +183,7 @@ struct ContentView: View {
 
                 Button(action: { showInspector.toggle() }) {
                     Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
+                        .foregroundColor(hasActiveFilters ? .accentColor : nil)
                 }
                 .help("Show filter inspector")
             }
@@ -168,7 +205,7 @@ struct ContentView: View {
         }
         .inspector(isPresented: $showInspector) {
             inspectorContent
-                .inspectorColumnWidth(min: 200, ideal: 250, max: 350)
+                .inspectorColumnWidth(min: 250, ideal: 350, max: 500)
         }
         .safeAreaInset(edge: .bottom) {
             if let errorMessage = errorMessage {
@@ -198,10 +235,10 @@ struct ContentView: View {
                 selectedEvent = displayedSegment?.events(useSortedOrder: useSortedOrder).first
             }
         }
-        .onChange(of: selectedEventTypeFilter) {
+        .onChange(of: enabledEventTypes) {
             updateSelectedSegmentAfterFilter()
         }
-        .onChange(of: invertFilter) {
+        .onChange(of: enabledIncrementalSources) {
             updateSelectedSegmentAfterFilter()
         }
         .onChange(of: timestampFilterValue) {
@@ -501,17 +538,26 @@ struct ContentView: View {
     }
 
     private var inspectorContent: some View {
-        Form {
-            Section("Event Filters") {
-                Picker("Event Type", selection: $selectedEventTypeFilter) {
-                    ForEach(eventTypes, id: \.self) { type in
-                        Text(type).tag(type)
-                    }
+        VStack(spacing: 0) {
+            // Clear filters button (always shown, disabled when no filters)
+            HStack {
+                Button(action: clearAllFilters) {
+                    Label("Clear All Filters", systemImage: "xmark.circle")
                 }
+                .disabled(!hasActiveFilters)
 
-                Toggle("Invert Filter", isOn: $invertFilter)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+
+            Form {
+                // 1. Display Options
+            Section("Display Options") {
+                Toggle("Use Sorted Order", isOn: $useSortedOrder)
             }
 
+            // 2. Time Filter
             Section("Time Filter") {
                 HStack {
                     Text("Timestamp")
@@ -533,12 +579,50 @@ struct ContentView: View {
                 }
             }
 
-            Section("Display Options") {
-                Toggle("Use Sorted Order", isOn: $useSortedOrder)
+            // 3. Event Filters
+            Section("Event Type Filters") {
+                ForEach(allEventTypes, id: \.self) { eventType in
+                    Toggle(eventType, isOn: Binding(
+                        get: { enabledEventTypes.contains(eventType) },
+                        set: { isEnabled in
+                            if isEnabled {
+                                enabledEventTypes.insert(eventType)
+                            } else {
+                                enabledEventTypes.remove(eventType)
+                            }
+                        }
+                    ))
+                }
+            }
+
+            // IncrementalSnapshot source filters (only shown when IncrementalSnapshot is enabled)
+            if enabledEventTypes.contains("IncrementalSnapshot") {
+                Section("IncrementalSnapshot Sources") {
+                    ForEach(incrementalSourceTypes, id: \.id) { source in
+                        Toggle(source.name, isOn: Binding(
+                            get: { enabledIncrementalSources.contains(source.id) },
+                            set: { isEnabled in
+                                if isEnabled {
+                                    enabledIncrementalSources.insert(source.id)
+                                } else {
+                                    enabledIncrementalSources.remove(source.id)
+                                }
+                            }
+                        ))
+                    }
+                }
             }
         }
         .formStyle(.grouped)
+        }
+        //.padding(.top, -20)
         .navigationTitle("Filters")
+    }
+
+    private func clearAllFilters() {
+        enabledEventTypes = Set(allEventTypes)
+        enabledIncrementalSources = Set(incrementalSourceTypes.map { $0.id })
+        timestampFilterValue = ""
     }
 
     private func statusBar(message: String, isError: Bool) -> some View {
