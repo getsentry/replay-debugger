@@ -97,6 +97,9 @@ struct ContentView: View {
     @State private var useSortedOrder = true
     @State private var timestampFilterOperator: String = ">"
     @State private var timestampFilterValue: String = ""
+    @State private var highlightedNodeId: Int? = nil
+    @State private var showHighlightError: Bool = false
+    @State private var highlightErrorMessage: String = ""
     @State private var showInspector = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
@@ -297,6 +300,11 @@ struct ContentView: View {
         .inspector(isPresented: $showInspector) {
             inspectorContent
                 .inspectorColumnWidth(min: 250, ideal: 350, max: 500)
+        }
+        .alert("Element Not Found", isPresented: $showHighlightError) {
+            Button("OK") { }
+        } message: {
+            Text(highlightErrorMessage)
         }
         .safeAreaInset(edge: .bottom) {
             if let errorMessage = errorMessage {
@@ -535,7 +543,7 @@ struct ContentView: View {
                         }
                         .padding()
 
-                        JSONInspectorView(data: selectedEvent.data)
+                        JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement)
                     }
                 } else {
                     ContentUnavailableView(
@@ -556,7 +564,9 @@ struct ContentView: View {
                         fullSnapshotIndices: fullSnapshotIndices,
                         metaIndices: metaIndices,
                         renderStateCache: $htmlRenderStateCache,
-                        cacheInterval: cacheInterval
+                        cacheInterval: cacheInterval,
+                        highlightedNodeId: $highlightedNodeId,
+                        onHighlightError: showHighlightErrorAlert
                     )
                 } else {
                     VStack {
@@ -728,6 +738,16 @@ struct ContentView: View {
         enabledEventTypes = Set(allEventTypes)
         enabledIncrementalSources = Set(incrementalSourceTypes.map { $0.id })
         timestampFilterValue = ""
+    }
+
+    private func highlightElement(nodeId: Int) {
+        highlightedNodeId = nodeId
+        showHighlightError = false
+    }
+
+    private func showHighlightErrorAlert(message: String) {
+        highlightErrorMessage = message
+        showHighlightError = true
     }
 
     private func statusBar(message: String, isError: Bool) -> some View {
@@ -1262,7 +1282,7 @@ struct ContentView: View {
                                 .frame(height: 44)
                                 .padding(.horizontal, 16)
 
-                                JSONInspectorView(data: selectedEvent.data)
+                                JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement)
                                     .padding(.horizontal, 16)
                             }
                         } else {
@@ -1294,7 +1314,9 @@ struct ContentView: View {
                                 fullSnapshotIndices: fullSnapshotIndices,
                                 metaIndices: metaIndices,
                                 renderStateCache: $htmlRenderStateCache,
-                                cacheInterval: cacheInterval
+                                cacheInterval: cacheInterval,
+                                highlightedNodeId: $highlightedNodeId,
+                                onHighlightError: showHighlightErrorAlert
                             )
                         } else {
                             VStack {

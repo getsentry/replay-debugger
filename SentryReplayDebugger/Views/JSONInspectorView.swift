@@ -2,8 +2,9 @@ import SwiftUI
 
 struct JSONInspectorView: View {
     let data: [String: Any]
+    let onHighlightElement: ((Int) -> Void)?
     @State private var expandedKeys: Set<String> = []
-    
+
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 1) {
@@ -14,7 +15,8 @@ struct JSONInspectorView: View {
                         level: 0,
                         expandedKeys: $expandedKeys,
                         parentKey: nil,
-                        rootData: data
+                        rootData: data,
+                        onHighlightElement: onHighlightElement
                     )
                 }
             }
@@ -50,14 +52,16 @@ struct JSONKeyValueView: View {
     @State private var isHovered = false
     let parentKey: String?
     let rootData: [String: Any]
-    
-    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, parentKey: String? = nil, rootData: [String: Any]) {
+    let onHighlightElement: ((Int) -> Void)?
+
+    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil) {
         self.key = key
         self.value = value
         self.level = level
         self._expandedKeys = expandedKeys
         self.parentKey = parentKey
         self.rootData = rootData
+        self.onHighlightElement = onHighlightElement
     }
     
     private var isExpanded: Bool {
@@ -122,39 +126,51 @@ struct JSONKeyValueView: View {
                 isHovered = hovering
             }
             .contextMenu {
+                if key == "id" || key.hasSuffix(".id") {
+                    if let idValue = extractIdValue(from: value), onHighlightElement != nil {
+                        Button(action: {
+                            onHighlightElement?(idValue)
+                        }) {
+                            Label("Highlight Element", systemImage: "scope")
+                        }
+
+                        Divider()
+                    }
+                }
+
                 Button("Copy") {
                     copyValue()
                 }
-                
+
                 if isExpandableValue {
                     Divider()
-                    
+
                     Button("Expand All") {
                         expandRecursively()
                     }
-                    
+
                     Menu("Expand") {
                         Button("1 Level") {
                             expandLevels(1)
                         }
-                        
+
                         Button("2 Levels") {
                             expandLevels(2)
                         }
-                        
+
                         Button("3 Levels") {
                             expandLevels(3)
                         }
-                        
+
                         Button("4 Levels") {
                             expandLevels(4)
                         }
-                        
+
                         Button("5 Levels") {
                             expandLevels(5)
                         }
                     }
-                    
+
                     Button("Collapse All") {
                         collapseRecursively()
                     }
@@ -408,7 +424,8 @@ struct JSONKeyValueView: View {
                     level: level + 1,
                     expandedKeys: $expandedKeys,
                     parentKey: key,
-                    rootData: rootData
+                    rootData: rootData,
+                    onHighlightElement: onHighlightElement
                 )
             }
         } else if let array = value as? [Any] {
@@ -419,7 +436,8 @@ struct JSONKeyValueView: View {
                     level: level + 1,
                     expandedKeys: $expandedKeys,
                     parentKey: key,
-                    rootData: rootData
+                    rootData: rootData,
+                    onHighlightElement: onHighlightElement
                 )
             }
         }
@@ -542,6 +560,18 @@ struct JSONKeyValueView: View {
         }
         return nil
     }
+
+    private func extractIdValue(from value: Any) -> Int? {
+        if let intValue = value as? Int {
+            return intValue
+        } else if let stringValue = value as? String,
+                  let intValue = Int(stringValue) {
+            return intValue
+        } else if let numberValue = value as? NSNumber {
+            return numberValue.intValue
+        }
+        return nil
+    }
     
     private func incrementalSourceEnumName() -> String? {
         guard let sourceNumber = getNumericValue() else { return nil }
@@ -621,6 +651,6 @@ struct JSONKeyValueView: View {
         "coordinates": ["x": 100, "y": 200],
         "metadata": ["browser": "Chrome", "version": "98.0"],
         "active": true
-    ])
+    ], onHighlightElement: nil)
     .frame(width: 400, height: 300)
 }

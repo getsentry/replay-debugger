@@ -187,7 +187,7 @@ struct SegmentListView: View {
                     .frame(height: 44)
                     .padding(.horizontal, 16)
                     
-                    JSONInspectorView(data: selectedEvent.data)
+                    JSONInspectorView(data: selectedEvent.data, onHighlightElement: nil)
                         .padding(.horizontal, 16)
                 } else {
                     VStack {

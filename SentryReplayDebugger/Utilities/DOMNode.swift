@@ -189,10 +189,13 @@ class DOMElementNode: DOMContainerNode {
     override func toHTML() -> String {
         let tag = tagName.lowercased()
 
-        // Build attributes string
+        // Build attributes string (including data-rr-id for element identification)
+        var allAttributes = attributes
+        allAttributes["data-rr-id"] = "\(id)"
+
         var attrsString = ""
-        if !attributes.isEmpty {
-            let sortedAttrs = attributes.sorted { $0.key < $1.key }
+        if !allAttributes.isEmpty {
+            let sortedAttrs = allAttributes.sorted { $0.key < $1.key }
             attrsString = " " + sortedAttrs.map { key, value in
                 // Escape attribute values
                 let escapedValue = value

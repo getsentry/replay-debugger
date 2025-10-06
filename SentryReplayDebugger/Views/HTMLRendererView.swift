@@ -8,6 +8,8 @@ struct HTMLRenderPanel: View {
     let metaIndices: [Int]
     @Binding var renderStateCache: [Int: RRWebEventProcessor.RenderState]
     let cacheInterval: Int
+    @Binding var highlightedNodeId: Int?
+    let onHighlightError: (String) -> Void
     let panelId: String = UUID().uuidString
     @State private var showSource: Bool = false
 
@@ -38,7 +40,9 @@ struct HTMLRenderPanel: View {
                 renderStateCache: $renderStateCache,
                 cacheInterval: cacheInterval,
                 panelId: panelId,
-                showSource: $showSource
+                showSource: $showSource,
+                highlightedNodeId: $highlightedNodeId,
+                onHighlightError: onHighlightError
             )
         }
     }
@@ -53,11 +57,14 @@ struct HTMLRendererView: View {
     let cacheInterval: Int
     let panelId: String
     @Binding var showSource: Bool
+    @Binding var highlightedNodeId: Int?
+    let onHighlightError: (String) -> Void
     @State private var renderState: RRWebEventProcessor.RenderState = RRWebEventProcessor.RenderState()
     @State private var error: String?
     @State private var lastProcessedIndex: Int? = nil
     @State private var isProcessing: Bool = false
     @State private var isLoadingNewRender: Bool = false
+    @State private var webView: WKWebView? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -90,9 +97,10 @@ struct HTMLRendererView: View {
                     HTMLSourceView(html: html)
                 } else {
                     ScaledWebView(
-                        html: html,
+                        html: injectHighlight(into: html),
                         viewportWidth: renderState.viewportWidth,
-                        viewportHeight: renderState.viewportHeight
+                        viewportHeight: renderState.viewportHeight,
+                        webView: $webView
                     )
                 }
             }
@@ -105,6 +113,16 @@ struct HTMLRendererView: View {
             // Events array changed (e.g., data reloaded), reset state
             lastProcessedIndex = nil
             renderState = RRWebEventProcessor.RenderState()
+        }
+        .onChange(of: highlightedNodeId) { newId in
+            if let nodeId = newId {
+                highlightElement(nodeId)
+            }
+        }
+        .onChange(of: selectedEventIndex) {
+            // Clear highlight when navigating to a different event
+            clearHighlight()
+            highlightedNodeId = nil
         }
     }
 
@@ -423,12 +441,110 @@ struct HTMLRendererView: View {
             }
         }
     }
+
+    private func highlightElement(_ nodeId: Int) {
+        // Verify node exists in DOM tree
+        guard let domTree = renderState.domTree else {
+            onHighlightError("No DOM tree available")
+            highlightedNodeId = nil
+            return
+        }
+
+        guard domTree.findNode(byId: nodeId) != nil else {
+            onHighlightError("Element with ID \(nodeId) not found in rendered DOM")
+            highlightedNodeId = nil
+            return
+        }
+
+        NSLog("✨ Highlighting element \(nodeId)")
+
+        // The highlight is now injected into HTML, so just trigger a view update
+        // by doing nothing here - the view will re-render with the highlight
+    }
+
+    private func clearHighlight() {
+        // Highlight clearing is now automatic when highlightedNodeId is nil
+        NSLog("🧹 Clearing highlight")
+    }
+
+    private func injectHighlight(into html: String) -> String {
+        guard let nodeId = highlightedNodeId else {
+            return html
+        }
+
+        var modifiedHTML = html
+
+        // Inject highlight styles into the <head>
+        let highlightStyles = """
+<style id="rr-highlight-style">
+.rr-highlight {
+    outline: 3px solid #FF6B00 !important;
+    outline-offset: 2px !important;
+    background-color: rgba(255, 107, 0, 0.1) !important;
+    animation: rr-pulse 1.5s ease-in-out infinite;
+}
+@keyframes rr-pulse {
+    0%, 100% { outline-color: #FF6B00; }
+    50% { outline-color: #FF9A3D; }
+}
+</style>
+"""
+
+        // Inject styles before </head> or <body
+        if let headEndRange = modifiedHTML.range(of: "</head>") {
+            modifiedHTML.insert(contentsOf: highlightStyles, at: headEndRange.lowerBound)
+        } else if let bodyStartRange = modifiedHTML.range(of: "<body") {
+            modifiedHTML.insert(contentsOf: highlightStyles, at: bodyStartRange.lowerBound)
+        }
+
+        // Find the element with data-rr-id and add class
+        // Simple approach: replace data-rr-id="X" with class="rr-highlight" data-rr-id="X"
+        let searchPattern = "data-rr-id=\"\(nodeId)\""
+        let replacement = "class=\"rr-highlight\" data-rr-id=\"\(nodeId)\""
+
+        // Find first occurrence and replace (in case there are multiple with same ID, only highlight first)
+        if let range = modifiedHTML.range(of: searchPattern) {
+            // Check if there's already a class attribute on this element
+            // Look backwards to find the opening <
+            let startIndex = modifiedHTML.startIndex
+            let foundIndex = range.lowerBound
+
+            // Find the opening < before our data-rr-id
+            var tagStart = foundIndex
+            while tagStart > startIndex {
+                tagStart = modifiedHTML.index(before: tagStart)
+                if modifiedHTML[tagStart] == "<" {
+                    break
+                }
+            }
+
+            // Find the closing > after our data-rr-id
+            var tagEnd = range.upperBound
+            while tagEnd < modifiedHTML.endIndex && modifiedHTML[tagEnd] != ">" {
+                tagEnd = modifiedHTML.index(after: tagEnd)
+            }
+
+            let tagContent = String(modifiedHTML[tagStart...tagEnd])
+
+            // Check if class attribute exists
+            if tagContent.contains("class=\"") {
+                // Add to existing class
+                modifiedHTML = modifiedHTML.replacingOccurrences(of: "class=\"", with: "class=\"rr-highlight ", options: [], range: tagStart..<tagEnd)
+            } else {
+                // Add new class attribute
+                modifiedHTML.replaceSubrange(range, with: replacement)
+            }
+        }
+
+        return modifiedHTML
+    }
 }
 
 struct ScaledWebView: View {
     let html: String
     let viewportWidth: CGFloat?
     let viewportHeight: CGFloat?
+    @Binding var webView: WKWebView?
 
     var body: some View {
         GeometryReader { geometry in
@@ -442,14 +558,14 @@ struct ScaledWebView: View {
                 let scale = min(scaleX, scaleY, 1.0) // Don't scale up, only down
 
                 // Create WebView at actual viewport size
-                WebView(html: html)
+                WebView(html: html, webView: $webView)
                     .frame(width: vpWidth, height: vpHeight)
                     .scaleEffect(scale, anchor: .topLeading)
                     .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
             } else {
                 let _ = NSLog("⚠️ No viewport dimensions, rendering without scaling")
                 // No viewport dimensions, just show the HTML
-                WebView(html: html)
+                WebView(html: html, webView: $webView)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -458,11 +574,18 @@ struct ScaledWebView: View {
 
 struct WebView: NSViewRepresentable {
     let html: String
+    @Binding var webView: WKWebView?
 
     func makeNSView(context: Context) -> WKWebView {
         NSLog("🌐 WebView makeNSView called")
         let webView = WKWebView()
         webView.navigationDelegate = context.coordinator
+
+        // Store reference for JavaScript injection
+        DispatchQueue.main.async {
+            self.webView = webView
+        }
+
         return webView
     }
 
