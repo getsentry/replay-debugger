@@ -19,8 +19,10 @@ struct RRWebEventProcessor {
     /// - Parameters:
     ///   - events: All events from the segment
     ///   - targetIndex: The index of the selected event to process up to (inclusive)
+    ///   - startFromIndex: Optional index of FullSnapshot to start from (default: 0)
+    ///   - metaIndex: Optional index of Meta event to process first for viewport dimensions
     /// - Returns: The render state after processing all events up to the target
-    static func processEvents(_ events: [ReplayEvent], upToIndex targetIndex: Int) -> RenderState {
+    static func processEvents(_ events: [ReplayEvent], upToIndex targetIndex: Int, startFromIndex: Int = 0, metaIndex: Int? = nil) -> RenderState {
         var state = RenderState()
 
         // Validate index
@@ -28,12 +30,26 @@ struct RRWebEventProcessor {
             return state
         }
 
-        // Process all events up to and including the target
-        for i in 0...targetIndex {
+        // Process Meta event first if provided (for viewport dimensions)
+        if let metaIdx = metaIndex, metaIdx >= 0, metaIdx < events.count {
+            let metaEvent = events[metaIdx]
+            if metaEvent.type == 4 { // Verify it's actually a Meta event
+                processEvent(metaEvent, state: &state)
+            }
+        }
+
+        // Process events from startFromIndex to targetIndex
+        let actualStartIndex = max(0, startFromIndex)
+        for i in actualStartIndex...targetIndex {
             let event = events[i]
 
             // Skip Custom events (type 5) as they don't affect rendering
             if event.type == 5 {
+                continue
+            }
+
+            // Skip Meta if we already processed it
+            if let metaIdx = metaIndex, i == metaIdx {
                 continue
             }
 

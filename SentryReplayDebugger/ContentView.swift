@@ -29,7 +29,19 @@ struct ContentView: View {
     @State private var searchMatches: [SearchMatch] = []
     @State private var currentSearchIndex: Int = 0
     @FocusState private var searchFieldFocused: Bool
-    
+
+    // Performance: Cache for allEvents
+    @State private var cachedAllEvents: [ReplayEvent] = []
+    @State private var cachedAllEventsSegmentCount: Int = 0
+    @State private var cachedAllEventsSortOrder: Bool = true
+
+    // Performance: Pre-computed segment boundaries
+    @State private var segmentBoundaries: [Int] = []
+
+    // Performance: Pre-computed indices for FullSnapshot (type 2) and Meta (type 4) events
+    @State private var fullSnapshotIndices: [Int] = []
+    @State private var metaIndices: [Int] = []
+
     func setTimestampFilter(_ timestamp: Date) {
         timestampFilterValue = String(format: "%.3f", timestamp.timeIntervalSince1970)
     }
@@ -171,22 +183,29 @@ struct ContentView: View {
                 return event
             }
         }
-        .onChange(of: segments) { newSegments in
-            if !newSegments.isEmpty && selectedSegment == nil {
+        .onChange(of: segments) {
+            // Update event cache when segments change
+            updateEventCache()
+
+            if !segments.isEmpty && selectedSegment == nil {
                 selectedSegment = filteredSegments.first
                 selectedEvent = displayedSegment?.events(useSortedOrder: useSortedOrder).first
             }
         }
-        .onChange(of: selectedEventTypeFilter) { _ in
+        .onChange(of: useSortedOrder) {
+            // Update event cache when sort order changes
+            updateEventCache()
+        }
+        .onChange(of: selectedEventTypeFilter) {
             updateSelectedSegmentAfterFilter()
         }
-        .onChange(of: invertFilter) { _ in
+        .onChange(of: invertFilter) {
             updateSelectedSegmentAfterFilter()
         }
-        .onChange(of: timestampFilterValue) { _ in
+        .onChange(of: timestampFilterValue) {
             updateSelectedSegmentAfterFilter()
         }
-        .onChange(of: globalSearchQuery) { _ in
+        .onChange(of: globalSearchQuery) {
             performGlobalSearch()
         }
         .safeAreaInset(edge: .top) {
@@ -194,7 +213,7 @@ struct ContentView: View {
                 globalSearchBar
             }
         }
-        .onChange(of: timestampFilterOperator) { _ in
+        .onChange(of: timestampFilterOperator) {
             updateSelectedSegmentAfterFilter()
         }
     }
@@ -272,8 +291,8 @@ struct ContentView: View {
             }
             .listStyle(.sidebar)
             .environment(\.controlActiveState, .key)
-            .onChange(of: selectedSegment) { newSegment in
-                if let segment = newSegment {
+            .onChange(of: selectedSegment) {
+                if let segment = selectedSegment {
                     selectedEvent = segment.events(useSortedOrder: useSortedOrder).first
                     withAnimation {
                         proxy.scrollTo(segment.id, anchor: .center)
@@ -340,8 +359,8 @@ struct ContentView: View {
             }
             .listStyle(.plain)
             .environment(\.controlActiveState, .key)
-            .onChange(of: selectedEvent) { newEvent in
-                if let event = newEvent {
+            .onChange(of: selectedEvent) {
+                if let event = selectedEvent {
                     withAnimation {
                         proxy.scrollTo(event.id, anchor: .center)
                     }
@@ -381,7 +400,9 @@ struct ContentView: View {
                         if let eventIndex = selectedEventGlobalIndex {
                             HTMLRenderPanel(
                                 events: allEvents,
-                                selectedEventIndex: eventIndex
+                                selectedEventIndex: eventIndex,
+                                fullSnapshotIndices: fullSnapshotIndices,
+                                metaIndices: metaIndices
                             )
                             .frame(minHeight: 100)
                         } else {
@@ -405,9 +426,43 @@ struct ContentView: View {
         }
     }
 
-    /// Flattened array of all events from all segments
+    /// Flattened array of all events from all segments (cached for performance)
     private var allEvents: [ReplayEvent] {
-        return segments.flatMap { $0.events(useSortedOrder: useSortedOrder) }
+        return cachedAllEvents
+    }
+
+    /// Update cache and segment boundaries
+    private func updateEventCache() {
+        cachedAllEvents = segments.flatMap { $0.events(useSortedOrder: useSortedOrder) }
+        cachedAllEventsSegmentCount = segments.count
+        cachedAllEventsSortOrder = useSortedOrder
+
+        // Also update segment boundaries and event type indices
+        var boundaries: [Int] = [0]
+        var cumulative = 0
+        var fullSnapshots: [Int] = []
+        var metas: [Int] = []
+
+        for segment in segments {
+            let events = segment.events(useSortedOrder: useSortedOrder)
+
+            // Build indices for FullSnapshot and Meta events
+            for (localIndex, event) in events.enumerated() {
+                let globalIndex = cumulative + localIndex
+                if event.type == 2 { // FullSnapshot
+                    fullSnapshots.append(globalIndex)
+                } else if event.type == 4 { // Meta
+                    metas.append(globalIndex)
+                }
+            }
+
+            cumulative += events.count
+            boundaries.append(cumulative)
+        }
+
+        segmentBoundaries = boundaries
+        fullSnapshotIndices = fullSnapshots
+        metaIndices = metas
     }
 
     /// Global index of the selected event in the flattened events array
@@ -428,12 +483,11 @@ struct ContentView: View {
             return nil
         }
 
-        // Calculate global index: sum of all events in prior segments + position in current segment
-        var globalIndex = 0
-        for i in 0..<originalSegmentIndex {
-            globalIndex += segments[i].events(useSortedOrder: useSortedOrder).count
+        // O(1) lookup using pre-computed segment boundaries
+        guard originalSegmentIndex < segmentBoundaries.count else {
+            return nil
         }
-        globalIndex += eventIndexInSegment
+        let globalIndex = segmentBoundaries[originalSegmentIndex] + eventIndexInSegment
 
         return globalIndex
     }
@@ -994,7 +1048,9 @@ struct ContentView: View {
                         if let eventIndex = selectedEventGlobalIndex {
                             HTMLRenderPanel(
                                 events: allEvents,
-                                selectedEventIndex: eventIndex
+                                selectedEventIndex: eventIndex,
+                                fullSnapshotIndices: fullSnapshotIndices,
+                                metaIndices: metaIndices
                             )
                             .frame(minWidth: 300)
                         } else {
