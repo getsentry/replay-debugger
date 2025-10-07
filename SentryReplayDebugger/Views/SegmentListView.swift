@@ -145,8 +145,9 @@ struct SegmentListView: View {
                     .frame(height: 44)
                     .padding(.horizontal, 16)
                     
-                    List(selectedSegment.events(useSortedOrder: useSortedOrder)) { event in
-                        EventRowView(event: event, isSelected: selectedEvent?.id == event.id)
+                    List(Array(selectedSegment.events(useSortedOrder: useSortedOrder).enumerated()), id: \.element.id) { index, event in
+                        let previousEvent = index > 0 ? selectedSegment.events(useSortedOrder: useSortedOrder)[index - 1] : nil
+                        EventRowView(event: event, isSelected: selectedEvent?.id == event.id, previousEvent: previousEvent)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 selectedEvent = event
@@ -346,7 +347,8 @@ struct SegmentRowView: View {
         guard let previous = previousSegment else { return nil }
         let timeDiff = (originalSegment ?? segment).timestamp.timeIntervalSince(previous.timestamp)
         let sign = timeDiff >= 0 ? "+" : ""
-        return "\(sign)\(formatDuration(timeDiff))"
+        // Always format as seconds with 3 decimal places for consistency
+        return String(format: "%@%0.3fs", sign, timeDiff)
     }
 
     private func formatTimestamp(_ date: Date) -> String {
@@ -452,19 +454,28 @@ struct SegmentRowView: View {
 struct EventRowView: View {
     let event: ReplayEvent
     let isSelected: Bool
+    let previousEvent: ReplayEvent?
     var onTimestampClick: ((Date) -> Void)? = nil
-    
+
+    private var timeDifferenceFromPrevious: String? {
+        guard let previous = previousEvent else { return nil }
+        let timeDiff = event.timestamp.timeIntervalSince(previous.timestamp)
+        let sign = timeDiff >= 0 ? "+" : ""
+        // Always format as seconds with 3 decimal places for consistency
+        return String(format: "%@%0.3fs", sign, timeDiff)
+    }
+
     private func formatTimestamp(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
         formatter.dateStyle = .none
-        
+
         let timeString = formatter.string(from: date)
         let milliseconds = Int((date.timeIntervalSince1970.truncatingRemainder(dividingBy: 1)) * 1000)
-        
+
         return "\(timeString).\(String(format: "%03d", milliseconds))"
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -472,29 +483,37 @@ struct EventRowView: View {
                     Text(ContentView.displayName(for: event))
                         .font(.system(.body, design: .monospaced))
                         .fontWeight(.medium)
-                    
+
                     if let subheading = eventSubheading {
                         Text(subheading)
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 Spacer()
-                
-                Button(action: {
-                    onTimestampClick?(event.timestamp)
-                }) {
-                    Text(formatTimestamp(event.timestamp))
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-                .onHover { hovering in
-                    if hovering {
-                        NSCursor.pointingHand.push()
-                    } else {
-                        NSCursor.pop()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Button(action: {
+                        onTimestampClick?(event.timestamp)
+                    }) {
+                        Text(formatTimestamp(event.timestamp))
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovering in
+                        if hovering {
+                            NSCursor.pointingHand.push()
+                        } else {
+                            NSCursor.pop()
+                        }
+                    }
+
+                    if let timeDiff = timeDifferenceFromPrevious {
+                        Text(timeDiff)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

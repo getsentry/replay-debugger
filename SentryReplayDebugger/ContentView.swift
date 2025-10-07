@@ -480,13 +480,16 @@ struct ContentView: View {
 
     private func eventsListView(for segment: ReplaySegment) -> some View {
         let events = segment.events(useSortedOrder: useSortedOrder)
+        let eventsArray = Array(events.enumerated())
 
         return ScrollViewReader { proxy in
             List(selection: $selectedEvent) {
-                ForEach(events) { event in
+                ForEach(eventsArray, id: \.element.id) { index, event in
+                    let previousEvent: ReplayEvent? = index > 0 ? events[index - 1] : nil
                     EventRowView(
                         event: event,
                         isSelected: selectedEvent?.id == event.id,
+                        previousEvent: previousEvent,
                         onTimestampClick: { timestamp in
                             setTimestampFilter(timestamp)
                         }
@@ -1232,10 +1235,12 @@ struct ContentView: View {
                     .frame(height: 44)
                     .padding(.trailing, 16)
                     
-                    List(displayedSegment.events(useSortedOrder: useSortedOrder)) { event in
+                    List(Array(displayedSegment.events(useSortedOrder: useSortedOrder).enumerated()), id: \.element.id) { index, event in
+                        let previousEvent: ReplayEvent? = index > 0 ? displayedSegment.events(useSortedOrder: useSortedOrder)[index - 1] : nil
                         EventRowView(
                             event: event,
                             isSelected: selectedEvent?.id == event.id,
+                            previousEvent: previousEvent,
                             onTimestampClick: { timestamp in
                                 setTimestampFilter(timestamp)
                             }
