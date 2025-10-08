@@ -346,9 +346,27 @@ struct SegmentRowView: View {
     private var timeDifferenceFromPrevious: String? {
         guard let previous = previousSegment else { return nil }
         let timeDiff = (originalSegment ?? segment).timestamp.timeIntervalSince(previous.timestamp)
-        let sign = timeDiff >= 0 ? "+" : ""
-        // Always format as seconds with 3 decimal places for consistency
-        return String(format: "%@%0.3fs", sign, timeDiff)
+        return formatTimeDiff(timeDiff)
+    }
+
+    private func formatTimeDiff(_ duration: TimeInterval) -> String {
+        let sign = duration >= 0 ? "+" : ""
+        let absDuration = abs(duration)
+
+        if absDuration < 60 {
+            // Less than 1 minute: show seconds with 3 decimal places
+            return String(format: "%@%0.3fs", sign, duration)
+        } else if absDuration < 3600 {
+            // Less than 1 hour: show minutes and seconds
+            let minutes = Int(duration / 60)
+            let seconds = duration.truncatingRemainder(dividingBy: 60)
+            return String(format: "%@%dm %0.1fs", sign, abs(minutes), abs(seconds))
+        } else {
+            // 1 hour or more: show hours and minutes
+            let hours = Int(duration / 3600)
+            let minutes = Int((duration.truncatingRemainder(dividingBy: 3600)) / 60)
+            return String(format: "%@%dh %dm", sign, abs(hours), abs(minutes))
+        }
     }
 
     private func formatTimestamp(_ date: Date) -> String {
@@ -460,9 +478,27 @@ struct EventRowView: View {
     private var timeDifferenceFromPrevious: String? {
         guard let previous = previousEvent else { return nil }
         let timeDiff = event.timestamp.timeIntervalSince(previous.timestamp)
-        let sign = timeDiff >= 0 ? "+" : ""
-        // Always format as seconds with 3 decimal places for consistency
-        return String(format: "%@%0.3fs", sign, timeDiff)
+        return formatTimeDiff(timeDiff)
+    }
+
+    private func formatTimeDiff(_ duration: TimeInterval) -> String {
+        let sign = duration >= 0 ? "+" : ""
+        let absDuration = abs(duration)
+
+        if absDuration < 60 {
+            // Less than 1 minute: show seconds with 3 decimal places
+            return String(format: "%@%0.3fs", sign, duration)
+        } else if absDuration < 3600 {
+            // Less than 1 hour: show minutes and seconds
+            let minutes = Int(duration / 60)
+            let seconds = duration.truncatingRemainder(dividingBy: 60)
+            return String(format: "%@%dm %0.1fs", sign, abs(minutes), abs(seconds))
+        } else {
+            // 1 hour or more: show hours and minutes
+            let hours = Int(duration / 3600)
+            let minutes = Int((duration.truncatingRemainder(dividingBy: 3600)) / 60)
+            return String(format: "%@%dh %dm", sign, abs(hours), abs(minutes))
+        }
     }
 
     private func formatTimestamp(_ date: Date) -> String {
