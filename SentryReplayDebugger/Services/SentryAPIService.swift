@@ -1,11 +1,17 @@
 import Foundation
 
+struct PaginatedResponse {
+    let segments: [ReplaySegment]
+    let nextCursor: String?
+    let hasMore: Bool
+}
+
 class SentryAPIService: ObservableObject {
     static let shared = SentryAPIService()
-    
+
     private let baseURL = "https://sentry.io/api/0"
     private let session = URLSession.shared
-    
+
     private init() {}
     
     func fetchReplaySegments(orgSlug: String, replayId: String) async throws -> [ReplaySegment] {
@@ -129,7 +135,7 @@ class SentryAPIService: ObservableObject {
                 ]
             ),
             ReplayEvent(
-                id: "event-2", 
+                id: "event-2",
                 type: 3,  // IncrementalSnapshot
                 timestamp: Date().addingTimeInterval(1000),
                 data: [
@@ -139,7 +145,7 @@ class SentryAPIService: ObservableObject {
                 ]
             )
         ]
-        
+
         return [
             ReplaySegment(
                 id: "segment-0",
@@ -147,6 +153,166 @@ class SentryAPIService: ObservableObject {
                 events: mockEvents
             )
         ]
+    }
+
+    // MARK: - CURL Command Support
+
+    func fetchReplaySegmentsFromCURL(_ curlCommand: String) async throws -> [ReplaySegment] {
+        // Parse CURL command
+        let curlRequest = try CURLParser.parse(curlCommand: curlCommand)
+
+        // Fetch all pages
+        var allSegments: [ReplaySegment] = []
+        var currentCursor: String? = "0:0:0"
+
+        while let cursor = currentCursor {
+            NSLog("📄 Fetching page with cursor: \(cursor)")
+            let response = try await fetchPagedSegments(curlRequest: curlRequest, cursor: cursor)
+            allSegments.append(contentsOf: response.segments)
+
+            if response.hasMore {
+                currentCursor = response.nextCursor
+            } else {
+                currentCursor = nil
+            }
+        }
+
+        NSLog("✅ Fetched total of \(allSegments.count) segments across all pages")
+        return allSegments
+    }
+
+    private func fetchPagedSegments(curlRequest: CURLRequest, cursor: String) async throws -> PaginatedResponse {
+        // Build URL with cursor and per_page params
+        var urlComponents = URLComponents(url: curlRequest.url, resolvingAgainstBaseURL: false)!
+
+        // Get existing per_page or default to 100
+        var queryItems = urlComponents.queryItems ?? []
+        let perPage = queryItems.first(where: { $0.name == "per_page" })?.value ?? "100"
+
+        // Update cursor and ensure per_page is set
+        queryItems.removeAll(where: { $0.name == "cursor" || $0.name == "per_page" })
+        queryItems.append(URLQueryItem(name: "cursor", value: cursor))
+        queryItems.append(URLQueryItem(name: "per_page", value: perPage))
+        urlComponents.queryItems = queryItems
+
+        guard let url = urlComponents.url else {
+            throw APIError.invalidResponse
+        }
+
+        // Build request with filtered headers and cookies
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        // Add filtered headers
+        for (key, value) in curlRequest.headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        // Add cookies
+        if !curlRequest.cookies.isEmpty {
+            let cookieString = curlRequest.cookies.map { "\($0.key)=\($0.value)" }.joined(separator: "; ")
+            request.setValue(cookieString, forHTTPHeaderField: "Cookie")
+        }
+
+        NSLog("🌐 Fetching: \(url)")
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw APIError.httpError(httpResponse.statusCode)
+        }
+
+        // Parse Link header for pagination
+        let linkHeader = httpResponse.value(forHTTPHeaderField: "Link") ?? ""
+        let (nextCursor, hasMore) = parseLinkHeader(linkHeader)
+
+        // Parse segments from response
+        // The API returns an array of arrays: [segment0_events[], segment1_events[], ...]
+        let jsonObject = try JSONSerialization.jsonObject(with: data)
+
+        guard let outerArray = jsonObject as? [Any] else {
+            NSLog("❌ Expected array, got: \(type(of: jsonObject))")
+            throw APIError.decodingError
+        }
+
+        NSLog("📦 Response has \(outerArray.count) segments")
+
+        // Parse each segment (which is an array of events)
+        var segments: [ReplaySegment] = []
+
+        for (index, item) in outerArray.enumerated() {
+            guard let eventsArray = item as? [[String: Any]] else {
+                NSLog("⚠️ Segment \(index) is not an array of events, skipping")
+                continue
+            }
+
+            NSLog("📦 Segment \(index) has \(eventsArray.count) events")
+
+            // Parse events for this segment
+            let events = eventsArray.enumerated().compactMap { eventIndex, eventData -> ReplayEvent? in
+                let id = eventData["id"] as? String ?? "event-\(index)-\(eventIndex)"
+                let type = parseEventType(eventData["type"])
+                let timestamp = parseTimestamp(from: eventData["timestamp"]) ?? Date()
+                let data = eventData["data"] as? [String: Any] ?? eventData
+
+                return ReplayEvent(id: id, type: type, timestamp: timestamp, data: data)
+            }
+
+            // Use first event timestamp as segment timestamp
+            let segmentTimestamp = events.first?.timestamp ?? Date()
+
+            let segment = ReplaySegment(
+                id: "segment-\(index)",
+                timestamp: segmentTimestamp,
+                events: events
+            )
+            segments.append(segment)
+        }
+
+        NSLog("✅ Parsed \(segments.count) segments with total of \(segments.reduce(0) { $0 + $1.events(useSortedOrder: false).count }) events")
+
+        return PaginatedResponse(segments: segments, nextCursor: nextCursor, hasMore: hasMore)
+    }
+
+    private func parseLinkHeader(_ linkHeader: String) -> (nextCursor: String?, hasMore: Bool) {
+        // Parse Link header format:
+        // <URL>; rel="next"; results="true"; cursor="0:100:0"
+
+        let links = linkHeader.components(separatedBy: ",")
+
+        for link in links {
+            let parts = link.components(separatedBy: ";")
+
+            // Check if this is the "next" link
+            let isNext = parts.contains(where: { $0.trimmingCharacters(in: .whitespaces).contains("rel=\"next\"") })
+
+            if isNext {
+                // Check if results="true" (meaning there are more results)
+                let hasResults = parts.contains(where: { $0.trimmingCharacters(in: .whitespaces).contains("results=\"true\"") })
+
+                if !hasResults {
+                    // No more results, stop pagination
+                    return (nil, false)
+                }
+
+                // Extract cursor value
+                for part in parts {
+                    let trimmed = part.trimmingCharacters(in: .whitespaces)
+                    if trimmed.hasPrefix("cursor=\"") {
+                        let cursorValue = trimmed
+                            .replacingOccurrences(of: "cursor=\"", with: "")
+                            .replacingOccurrences(of: "\"", with: "")
+                        return (cursorValue, true)
+                    }
+                }
+            }
+        }
+
+        return (nil, false)
     }
 }
 

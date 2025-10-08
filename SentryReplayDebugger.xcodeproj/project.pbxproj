@@ -11,6 +11,7 @@
 		28651E432E91A7290087E7DD /* RRWebHTMLConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28651E422E91A7290087E7DD /* RRWebHTMLConverter.swift */; };
 		28651E452E91A9BF0087E7DD /* HTMLBeautifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28651E442E91A9BF0087E7DD /* HTMLBeautifier.swift */; };
 		28651E472E91A9C80087E7DD /* HTMLSourceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28651E462E91A9C80087E7DD /* HTMLSourceView.swift */; };
+		28CF12952E96F5E400116F07 /* CURLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28CF12942E96F5E400116F07 /* CURLParser.swift */; };
 		694FD666B3E14DFC8624CFAA /* RRWebEventProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFACDF4DE5646BEAC5276DE /* RRWebEventProcessor.swift */; };
 		6CF01FE061AF421CBB1352C6 /* DOMNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = C516FA0458D3442284511A93 /* DOMNode.swift */; };
 		A1234567890ABCDEF001 /* SentryReplayDebuggerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF002 /* SentryReplayDebuggerApp.swift */; };
@@ -29,8 +30,8 @@
 		28651E422E91A7290087E7DD /* RRWebHTMLConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RRWebHTMLConverter.swift; sourceTree = "<group>"; };
 		28651E442E91A9BF0087E7DD /* HTMLBeautifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLBeautifier.swift; sourceTree = "<group>"; };
 		28651E462E91A9C80087E7DD /* HTMLSourceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLSourceView.swift; sourceTree = "<group>"; };
+		28CF12942E96F5E400116F07 /* CURLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CURLParser.swift; sourceTree = "<group>"; };
 		5FFACDF4DE5646BEAC5276DE /* RRWebEventProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RRWebEventProcessor.swift; sourceTree = "<group>"; };
-		C516FA0458D3442284511A93 /* DOMNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMNode.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF002 /* SentryReplayDebuggerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryReplayDebuggerApp.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF004 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -42,6 +43,7 @@
 		A1234567890ABCDEF035 /* SentryURLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryURLParser.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF037 /* JSONInspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONInspectorView.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF039 /* SegmentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentListView.swift; sourceTree = "<group>"; };
+		C516FA0458D3442284511A93 /* DOMNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMNode.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +119,7 @@
 		A1234567890ABCDEF018 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				28CF12942E96F5E400116F07 /* CURLParser.swift */,
 				C516FA0458D3442284511A93 /* DOMNode.swift */,
 				28651E442E91A9BF0087E7DD /* HTMLBeautifier.swift */,
 				28651E422E91A7290087E7DD /* RRWebHTMLConverter.swift */,
@@ -204,6 +207,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				28CF12952E96F5E400116F07 /* CURLParser.swift in Sources */,
 				28651E412E91A7210087E7DD /* HTMLRendererView.swift in Sources */,
 				28651E432E91A7290087E7DD /* RRWebHTMLConverter.swift in Sources */,
 				28651E452E91A9BF0087E7DD /* HTMLBeautifier.swift in Sources */,

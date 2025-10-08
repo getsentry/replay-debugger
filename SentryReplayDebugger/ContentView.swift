@@ -967,16 +967,24 @@ struct ContentView: View {
 
     private func loadFromClipboard() {
         let pasteboard = NSPasteboard.general
-        guard let jsonString = pasteboard.string(forType: .string) else {
+        guard let clipboardText = pasteboard.string(forType: .string) else {
             errorMessage = "No text found in clipboard"
             return
         }
-        
-        guard let jsonData = jsonString.data(using: .utf8) else {
+
+        // Check if clipboard contains a CURL command
+        let trimmedText = clipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedText.lowercased().hasPrefix("curl") {
+            loadFromCURLCommand(trimmedText)
+            return
+        }
+
+        // Otherwise, treat as JSON
+        guard let jsonData = clipboardText.data(using: .utf8) else {
             errorMessage = "Invalid text format in clipboard"
             return
         }
-        
+
         do {
             let jsonObject = try JSONSerialization.jsonObject(with: jsonData)
             
@@ -1013,7 +1021,32 @@ struct ContentView: View {
             errorMessage = "Invalid JSON in clipboard: \(error.localizedDescription)"
         }
     }
-    
+
+    private func loadFromCURLCommand(_ curlCommand: String) {
+        Task {
+            do {
+                isLoading = true
+                errorMessage = nil
+
+                NSLog("📋 Loading from CURL command")
+                let fetchedSegments = try await SentryAPIService.shared.fetchReplaySegmentsFromCURL(curlCommand)
+
+                await MainActor.run {
+                    segments = fetchedSegments
+                    isLoading = false
+                    errorMessage = nil
+                    NSLog("✅ Successfully loaded \(fetchedSegments.count) segments from CURL")
+                }
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = "Failed to load from CURL: \(error.localizedDescription)"
+                    NSLog("❌ CURL load failed: \(error)")
+                }
+            }
+        }
+    }
+
     private func createSegmentFromEvents(_ eventsArray: [[String: Any]], id: String) -> ReplaySegment {
         let events = eventsArray.enumerated().map { index, eventData in
             let eventId = eventData["id"] as? String ?? "event-\(index)"
