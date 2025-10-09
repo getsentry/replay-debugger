@@ -164,11 +164,13 @@ class SentryAPIService: ObservableObject {
         // Fetch all pages
         var allSegments: [ReplaySegment] = []
         var currentCursor: String? = "0:0:0"
+        var segmentOffset = 0
 
         while let cursor = currentCursor {
             NSLog("📄 Fetching page with cursor: \(cursor)")
-            let response = try await fetchPagedSegments(curlRequest: curlRequest, cursor: cursor)
+            let response = try await fetchPagedSegments(curlRequest: curlRequest, cursor: cursor, segmentOffset: segmentOffset)
             allSegments.append(contentsOf: response.segments)
+            segmentOffset += response.segments.count
 
             if response.hasMore {
                 currentCursor = response.nextCursor
@@ -181,7 +183,7 @@ class SentryAPIService: ObservableObject {
         return allSegments
     }
 
-    private func fetchPagedSegments(curlRequest: CURLRequest, cursor: String) async throws -> PaginatedResponse {
+    private func fetchPagedSegments(curlRequest: CURLRequest, cursor: String, segmentOffset: Int) async throws -> PaginatedResponse {
         // Build URL with cursor and per_page params
         var urlComponents = URLComponents(url: curlRequest.url, resolvingAgainstBaseURL: false)!
 
@@ -250,11 +252,12 @@ class SentryAPIService: ObservableObject {
                 continue
             }
 
-            NSLog("📦 Segment \(index) has \(eventsArray.count) events")
+            let globalSegmentIndex = segmentOffset + index
+            NSLog("📦 Segment \(globalSegmentIndex) has \(eventsArray.count) events")
 
             // Parse events for this segment
             let events = eventsArray.enumerated().compactMap { eventIndex, eventData -> ReplayEvent? in
-                let id = eventData["id"] as? String ?? "event-\(index)-\(eventIndex)"
+                let id = eventData["id"] as? String ?? "event-\(globalSegmentIndex)-\(eventIndex)"
                 let type = parseEventType(eventData["type"])
                 let timestamp = parseTimestamp(from: eventData["timestamp"]) ?? Date()
                 let data = eventData["data"] as? [String: Any] ?? eventData
@@ -266,7 +269,7 @@ class SentryAPIService: ObservableObject {
             let segmentTimestamp = events.first?.timestamp ?? Date()
 
             let segment = ReplaySegment(
-                id: "segment-\(index)",
+                id: "segment-\(globalSegmentIndex)",
                 timestamp: segmentTimestamp,
                 events: events
             )

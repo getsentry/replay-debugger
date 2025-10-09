@@ -206,7 +206,9 @@ struct ContentView: View {
         }
 
         return segments.map { segment in
-            let filteredEvents = segment.sortedEvents.filter { event in
+            // OPTIMIZATION: Store sortedEvents in local variable
+            let sortedEvents = segment.sortedEvents
+            let filteredEvents = sortedEvents.filter { event in
                 // Apply event type filter - only show events whose type is enabled
                 if hasEventTypeFilters {
                     let baseType = ContentView.baseTypeName(for: event.type)
@@ -604,7 +606,7 @@ struct ContentView: View {
         var metas: [Int] = []
 
         for segment in segments {
-            // Always use sorted events for HTML renderer
+            // OPTIMIZATION: Always use sorted events for HTML renderer - stored in local variable
             let events = segment.sortedEvents
 
             // Build indices for FullSnapshot and Meta events

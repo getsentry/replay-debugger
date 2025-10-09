@@ -224,14 +224,18 @@ struct SegmentListView: View {
     }
     
     private func calculateColumnWidths() {
-        // Calculate segment column width based on new layout
+        // OPTIMIZATION: Sample first 50 segments instead of all for performance
+        let sampleSize = min(50, segments.count)
+        let sampledSegments = Array(segments.prefix(sampleSize))
+
+        // Calculate segment column width based on sampled segments
         var maxSegmentWidth: CGFloat = 300
 
         let monospacedFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
         let captionFont = NSFont.systemFont(ofSize: 11)
         let caption2Font = NSFont.systemFont(ofSize: 10)
 
-        for (index, segment) in segments.enumerated() {
+        for (index, segment) in sampledSegments.enumerated() {
             let segmentNumber = segment.id.replacingOccurrences(of: "segment-", with: "")
 
             // Calculate first line width: Segment X + duration + timestamp
@@ -241,7 +245,7 @@ struct SegmentListView: View {
 
             // Calculate duration width for first line
             var durationWidth: CGFloat = 0
-            let events = segment.sortedEvents
+            let events = segment.sortedEvents  // OPTIMIZATION: Store in local variable
             if events.count > 1,
                let firstEvent = events.min(by: { $0.timestamp < $1.timestamp }),
                let lastEvent = events.max(by: { $0.timestamp < $1.timestamp }) {
@@ -253,7 +257,7 @@ struct SegmentListView: View {
             let firstLineWidth = segmentTextWidth + durationWidth + timestampWidth + 32 // Spacers
 
             // Calculate second line width: size • event count + time diff
-            let bytes = segment.approximateSize
+            let bytes = segment.approximateSize  // OPTIMIZATION: Now cached in model
             let sizeText: String
             if bytes < 1024 {
                 sizeText = "\(bytes) B"
@@ -263,14 +267,14 @@ struct SegmentListView: View {
                 sizeText = String(format: "%.2f MB", Double(bytes) / (1024.0 * 1024.0))
             }
 
-            let eventCountText = "\(segment.sortedEvents.count) events"
+            let eventCountText = "\(events.count) events"  // OPTIMIZATION: Use local variable
             let sizeAndCountText = "\(sizeText) • \(eventCountText)"
             let sizeAndCountWidth = sizeAndCountText.widthOfString(usingFont: caption2Font)
 
             // Calculate time difference width
             var timeDiffWidth: CGFloat = 0
             if index > 0 {
-                let prevSegment = segments[index - 1]
+                let prevSegment = sampledSegments[index - 1]
                 let timeDiff = segment.timestamp.timeIntervalSince(prevSegment.timestamp)
                 let sign = timeDiff >= 0 ? "+" : ""
                 let timeDiffText = "\(sign)\(formatDuration(timeDiff))"
@@ -283,21 +287,9 @@ struct SegmentListView: View {
             maxSegmentWidth = max(maxSegmentWidth, totalWidth)
         }
         segmentColumnWidth = min(maxSegmentWidth, 500)
-        
-        // Calculate event column width based on all segments
-        var maxEventWidth: CGFloat = 250
-        
-        for segment in segments {
-            for event in segment.sortedEvents {
-                let displayName = ContentView.displayName(for: event)
-                let eventTypeWidth = displayName.widthOfString(usingFont: .systemFont(ofSize: 13, weight: .medium))
-                let timestampWidth = formatTimestamp(event.timestamp).widthOfString(usingFont: monospacedFont)
-                
-                let textWidth = max(eventTypeWidth, timestampWidth)
-                maxEventWidth = max(maxEventWidth, textWidth + 80) // Increased padding
-            }
-        }
-        eventColumnWidth = min(maxEventWidth, 450)
+
+        // OPTIMIZATION: Use fixed width for events column to avoid iterating all events
+        eventColumnWidth = 350
     }
 }
 
@@ -317,6 +309,7 @@ struct SegmentRowView: View {
     var onTimestampClick: ((Date) -> Void)? = nil
 
     private var segmentDuration: String? {
+        // OPTIMIZATION: Store sortedEvents in local variable to avoid repeated property access
         let events = (originalSegment ?? segment).sortedEvents
         guard events.count > 1,
               let firstEvent = events.min(by: { $0.timestamp < $1.timestamp }),
@@ -450,7 +443,7 @@ struct SegmentRowView: View {
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
 
-                    Text("\(segment.sortedEvents.count) events")
+                    Text("\(segment.sortedEvents.count) events")  // Note: count is O(1) so no optimization needed
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

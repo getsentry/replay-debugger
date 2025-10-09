@@ -6,30 +6,34 @@ struct ReplaySegment: Identifiable, Equatable, Hashable {
     let originalEvents: [ReplayEvent]
     let sortedEvents: [ReplayEvent]
     let wasResorted: Bool
-    
+    let approximateSize: Int  // Cached - calculated once in init
+
     init(id: String, timestamp: Date, events: [ReplayEvent]) {
         self.id = id
         self.timestamp = timestamp
         self.originalEvents = events
-        
+
         // Check if events are already sorted
         let isSorted = events.indices.dropLast().allSatisfy { i in
             events[i].timestamp <= events[i + 1].timestamp
         }
-        
+
         self.wasResorted = !isSorted
         self.sortedEvents = isSorted ? events : events.sorted { $0.timestamp < $1.timestamp }
+
+        // Calculate size once during init
+        self.approximateSize = Self.calculateSize(events: events)
     }
-    
+
     func events(useSortedOrder: Bool) -> [ReplayEvent] {
         return useSortedOrder ? sortedEvents : originalEvents
     }
 
-    /// Approximate size of segment in bytes (based on JSON serialization)
-    var approximateSize: Int {
+    /// Calculate approximate size of segment in bytes (based on JSON serialization)
+    private static func calculateSize(events: [ReplayEvent]) -> Int {
         do {
             // Estimate by serializing all event data to JSON
-            let eventsData = originalEvents.map { event -> [String: Any] in
+            let eventsData = events.map { event -> [String: Any] in
                 return [
                     "id": event.id,
                     "type": event.type,
