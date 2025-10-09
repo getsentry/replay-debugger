@@ -4,36 +4,56 @@ struct JSONInspectorView: View {
     let data: [String: Any]
     let onHighlightElement: ((Int) -> Void)?
     let onFindInSource: ((Int) -> Void)?
+    let highlightPath: [String]?  // Path to highlight (from search)
+    let searchQuery: String?  // Query to highlight within the value
     @State private var expandedKeys: Set<String> = []
     @State private var largeArrayLimits: [String: Int] = [:]  // Track display limits for large arrays
+    @State private var scrollToKey: String? = nil
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 1) {
-                ForEach(Array(data.keys.sorted()), id: \.self) { key in
-                    JSONKeyValueView(
-                        key: key,
-                        value: data[key] ?? "null",
-                        level: 0,
-                        expandedKeys: $expandedKeys,
-                        largeArrayLimits: $largeArrayLimits,
-                        parentKey: nil,
-                        rootData: data,
-                        onHighlightElement: onHighlightElement,
-                        onFindInSource: onFindInSource
-                    )
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 1) {
+                    ForEach(Array(data.keys.sorted()), id: \.self) { key in
+                        JSONKeyValueView(
+                            key: key,
+                            value: data[key] ?? "null",
+                            level: 0,
+                            expandedKeys: $expandedKeys,
+                            largeArrayLimits: $largeArrayLimits,
+                            parentKey: nil,
+                            rootData: data,
+                            onHighlightElement: onHighlightElement,
+                            onFindInSource: onFindInSource,
+                            highlightPath: highlightPath,
+                            currentPath: [key],
+                            searchQuery: searchQuery
+                        )
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+            }
+            .background(Color(red: 0.98, green: 0.98, blue: 0.98))
+            .font(.system(size: 11, design: .monospaced))
+            .onAppear {
+                expandToHighlightedPath()
+            }
+            .onChange(of: data.keys.sorted().joined()) { _ in
+                expandToHighlightedPath()
+            }
+            .onChange(of: highlightPath) { _ in
+                expandToHighlightedPath()
+            }
+            .onChange(of: scrollToKey) { newKey in
+                if let key = newKey {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation {
+                            proxy.scrollTo(key, anchor: .center)
+                        }
+                    }
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-        }
-        .background(Color(red: 0.98, green: 0.98, blue: 0.98))
-        .font(.system(size: 11, design: .monospaced))
-        .onAppear {
-            expandTopLevelItems()
-        }
-        .onChange(of: data.keys.sorted().joined()) { _ in
-            expandTopLevelItems()
         }
     }
     
@@ -44,6 +64,25 @@ struct JSONInspectorView: View {
             if value is [String: Any] || value is [Any] {
                 expandedKeys.insert("0-\(key)")
             }
+        }
+    }
+
+    private func expandToHighlightedPath() {
+        if let path = highlightPath, !path.isEmpty {
+            // Expand all keys along the path
+            for i in 0..<path.count {
+                let pathSegment = path[i]
+                let keyPath = "\(i)-\(pathSegment)"
+                expandedKeys.insert(keyPath)
+            }
+
+            // Set scroll target to the final key in the path
+            if let lastKey = path.last {
+                let level = path.count - 1
+                scrollToKey = "\(level)-\(lastKey)"
+            }
+        } else {
+            expandTopLevelItems()
         }
     }
 }
@@ -59,8 +98,11 @@ struct JSONKeyValueView: View {
     let rootData: [String: Any]
     let onHighlightElement: ((Int) -> Void)?
     let onFindInSource: ((Int) -> Void)?
+    let highlightPath: [String]?
+    let currentPath: [String]
+    let searchQuery: String?
 
-    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, largeArrayLimits: Binding<[String: Int]>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil, onFindInSource: ((Int) -> Void)? = nil) {
+    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, largeArrayLimits: Binding<[String: Int]>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil, onFindInSource: ((Int) -> Void)? = nil, highlightPath: [String]? = nil, currentPath: [String] = [], searchQuery: String? = nil) {
         self.key = key
         self.value = value
         self.level = level
@@ -70,6 +112,14 @@ struct JSONKeyValueView: View {
         self.rootData = rootData
         self.onHighlightElement = onHighlightElement
         self.onFindInSource = onFindInSource
+        self.highlightPath = highlightPath
+        self.currentPath = currentPath
+        self.searchQuery = searchQuery
+    }
+
+    private var isHighlighted: Bool {
+        guard let highlightPath = highlightPath else { return false }
+        return currentPath == highlightPath
     }
     
     private var isExpanded: Bool {
@@ -129,10 +179,11 @@ struct JSONKeyValueView: View {
                 .contentShape(Rectangle())
             }
             .frame(height: 16)
-            .background(isHovered ? Color.black.opacity(0.05) : Color.clear)
+            .background(isHighlighted ? Color.yellow.opacity(0.4) : (isHovered ? Color.black.opacity(0.05) : Color.clear))
             .onHover { hovering in
                 isHovered = hovering
             }
+            .id(keyPath)
             .contextMenu {
                 if key == "id" || key.hasSuffix(".id") || key == "nextId" || key == "parentId" {
                     if let idValue = extractIdValue(from: value) {
@@ -445,7 +496,10 @@ struct JSONKeyValueView: View {
                     parentKey: key,
                     rootData: rootData,
                     onHighlightElement: onHighlightElement,
-                    onFindInSource: onFindInSource
+                    onFindInSource: onFindInSource,
+                    highlightPath: highlightPath,
+                    currentPath: currentPath + [nestedKey],
+                    searchQuery: searchQuery
                 )
             }
         } else if let array = value as? [Any] {
@@ -473,7 +527,10 @@ struct JSONKeyValueView: View {
                         chunkKeyPath: chunkKeyPath,
                         rootData: rootData,
                         onHighlightElement: onHighlightElement,
-                        onFindInSource: onFindInSource
+                        onFindInSource: onFindInSource,
+                        highlightPath: highlightPath,
+                        currentPath: currentPath,
+                        searchQuery: searchQuery
                     )
                 }
             } else {
@@ -488,7 +545,10 @@ struct JSONKeyValueView: View {
                         parentKey: key,
                         rootData: rootData,
                         onHighlightElement: onHighlightElement,
-                        onFindInSource: onFindInSource
+                        onFindInSource: onFindInSource,
+                        highlightPath: highlightPath,
+                        currentPath: currentPath + ["\(index)"],
+                        searchQuery: searchQuery
                     )
                 }
             }
@@ -707,6 +767,9 @@ struct ArrayChunkView: View {
     let rootData: [String: Any]
     let onHighlightElement: ((Int) -> Void)?
     let onFindInSource: ((Int) -> Void)?
+    let highlightPath: [String]?
+    let currentPath: [String]
+    let searchQuery: String?
     @State private var isHovered = false
 
     private var isExpanded: Bool {
@@ -773,7 +836,10 @@ struct ArrayChunkView: View {
                         parentKey: chunkKey,
                         rootData: rootData,
                         onHighlightElement: onHighlightElement,
-                        onFindInSource: onFindInSource
+                        onFindInSource: onFindInSource,
+                        highlightPath: highlightPath,
+                        currentPath: currentPath + ["\(absoluteIndex)"],
+                        searchQuery: searchQuery
                     )
                 }
             }
@@ -791,6 +857,6 @@ struct ArrayChunkView: View {
         "metadata": ["browser": "Chrome", "version": "98.0"],
         "active": true,
         "largeArray": largeArray
-    ], onHighlightElement: nil, onFindInSource: nil)
+    ], onHighlightElement: nil, onFindInSource: nil, highlightPath: nil, searchQuery: nil)
     .frame(width: 400, height: 300)
 }

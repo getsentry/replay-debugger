@@ -83,6 +83,14 @@ struct SearchMatch: Identifiable {
     let segmentId: String
     let eventId: String
     let matchText: String
+    let jsonPath: [String]?  // Path to matched item in JSON (e.g., ["data", "attributes", "0", "name"])
+    let matchType: MatchType
+
+    enum MatchType {
+        case eventData
+        case eventId
+        case eventType
+    }
 }
 
 struct ContentView: View {
@@ -114,6 +122,7 @@ struct ContentView: View {
     @State private var currentSearchIndex: Int = 0
     @FocusState private var searchFieldFocused: Bool
     @State private var shouldScrollToSelection: Bool = false
+    @State private var currentSearchMatch: SearchMatch? = nil
 
     // Performance: Cache for allEvents (always chronologically sorted for HTML renderer)
     @State private var cachedAllEvents: [ReplayEvent] = []
@@ -634,8 +643,14 @@ struct ContentView: View {
                         }
                         .padding()
 
-                        JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement, onFindInSource: findInSource)
-                            .id(selectedEvent.id)
+                        JSONInspectorView(
+                            data: selectedEvent.data,
+                            onHighlightElement: highlightElement,
+                            onFindInSource: findInSource,
+                            highlightPath: currentSearchMatch?.matchType == .eventData ? currentSearchMatch?.jsonPath : nil,
+                            searchQuery: currentSearchMatch?.matchType == .eventData ? globalSearchQuery : nil
+                        )
+                        .id(selectedEvent.id)
                     }
                 } else {
                     ContentUnavailableView(
@@ -895,9 +910,52 @@ struct ContentView: View {
 
     // MARK: - Global Search Functions
 
+    private func findJSONPath(for query: String, in data: Any, currentPath: [String] = []) -> [String]? {
+        let queryLower = query.lowercased()
+
+        if let dict = data as? [String: Any] {
+            for (key, value) in dict {
+                let newPath = currentPath + [key]
+
+                // Check if the key or value matches
+                if key.lowercased().contains(queryLower) {
+                    return newPath
+                }
+
+                if let stringValue = value as? String, stringValue.lowercased().contains(queryLower) {
+                    return newPath
+                }
+
+                if let numberValue = value as? NSNumber, "\(numberValue)".lowercased().contains(queryLower) {
+                    return newPath
+                }
+
+                // Recursively search in nested structures
+                if let foundPath = findJSONPath(for: query, in: value, currentPath: newPath) {
+                    return foundPath
+                }
+            }
+        } else if let array = data as? [Any] {
+            for (index, item) in array.enumerated() {
+                let newPath = currentPath + ["\(index)"]
+
+                if let foundPath = findJSONPath(for: query, in: item, currentPath: newPath) {
+                    return foundPath
+                }
+            }
+        } else if let stringValue = data as? String, stringValue.lowercased().contains(queryLower) {
+            return currentPath
+        } else if let numberValue = data as? NSNumber, "\(numberValue)".lowercased().contains(queryLower) {
+            return currentPath
+        }
+
+        return nil
+    }
+
     private func performGlobalSearch() {
         searchMatches = []
         currentSearchIndex = 0
+        currentSearchMatch = nil
 
         guard !globalSearchQuery.isEmpty else { return }
 
@@ -909,10 +967,14 @@ struct ContentView: View {
                 if let jsonData = try? JSONSerialization.data(withJSONObject: event.data, options: []),
                    let jsonString = String(data: jsonData, encoding: .utf8),
                    jsonString.lowercased().contains(query) {
+                    // Find the specific path in the JSON where the match occurred
+                    let path = findJSONPath(for: query, in: event.data)
                     searchMatches.append(SearchMatch(
                         segmentId: segment.id,
                         eventId: event.id,
-                        matchText: "Event data"
+                        matchText: "Event data",
+                        jsonPath: path,
+                        matchType: .eventData
                     ))
                 }
 
@@ -921,7 +983,9 @@ struct ContentView: View {
                     searchMatches.append(SearchMatch(
                         segmentId: segment.id,
                         eventId: event.id,
-                        matchText: "Event ID: \(event.id)"
+                        matchText: "Event ID: \(event.id)",
+                        jsonPath: nil,
+                        matchType: .eventId
                     ))
                 }
 
@@ -931,7 +995,9 @@ struct ContentView: View {
                     searchMatches.append(SearchMatch(
                         segmentId: segment.id,
                         eventId: event.id,
-                        matchText: "Event type: \(eventType)"
+                        matchText: "Event type: \(eventType)",
+                        jsonPath: nil,
+                        matchType: .eventType
                     ))
                 }
             }
@@ -942,7 +1008,9 @@ struct ContentView: View {
                     searchMatches.append(SearchMatch(
                         segmentId: segment.id,
                         eventId: firstEvent.id,
-                        matchText: "Segment ID: \(segment.id)"
+                        matchText: "Segment ID: \(segment.id)",
+                        jsonPath: nil,
+                        matchType: .eventId
                     ))
                 }
             }
@@ -969,6 +1037,7 @@ struct ContentView: View {
     private func selectSearchMatch(at index: Int) {
         guard index < searchMatches.count else { return }
         let match = searchMatches[index]
+        currentSearchMatch = match
 
         // Find and select the segment
         if let segment = segments.first(where: { $0.id == match.segmentId }) {
@@ -1532,8 +1601,14 @@ struct ContentView: View {
                                 .frame(height: 44)
                                 .padding(.horizontal, 16)
 
-                                JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement, onFindInSource: findInSource)
-                            .id(selectedEvent.id)
+                                JSONInspectorView(
+                            data: selectedEvent.data,
+                            onHighlightElement: highlightElement,
+                            onFindInSource: findInSource,
+                            highlightPath: currentSearchMatch?.matchType == .eventData ? currentSearchMatch?.jsonPath : nil,
+                            searchQuery: currentSearchMatch?.matchType == .eventData ? globalSearchQuery : nil
+                        )
+                        .id(selectedEvent.id)
                                     .padding(.horizontal, 16)
                             }
                         } else {
