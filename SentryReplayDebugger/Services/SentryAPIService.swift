@@ -167,7 +167,9 @@ class SentryAPIService: ObservableObject {
         var segmentOffset = 0
 
         while let cursor = currentCursor {
+            #if DEBUG
             NSLog("📄 Fetching page with cursor: \(cursor)")
+            #endif
             let response = try await fetchPagedSegments(curlRequest: curlRequest, cursor: cursor, segmentOffset: segmentOffset)
             allSegments.append(contentsOf: response.segments)
             segmentOffset += response.segments.count
@@ -179,7 +181,9 @@ class SentryAPIService: ObservableObject {
             }
         }
 
+        #if DEBUG
         NSLog("✅ Fetched total of \(allSegments.count) segments across all pages")
+        #endif
         return allSegments
     }
 
@@ -237,23 +241,31 @@ class SentryAPIService: ObservableObject {
         let jsonObject = try JSONSerialization.jsonObject(with: data)
 
         guard let outerArray = jsonObject as? [Any] else {
+            #if DEBUG
             NSLog("❌ Expected array, got: \(type(of: jsonObject))")
+            #endif
             throw APIError.decodingError
         }
 
+        #if DEBUG
         NSLog("📦 Response has \(outerArray.count) segments")
+        #endif
 
         // Parse each segment (which is an array of events)
         var segments: [ReplaySegment] = []
 
         for (index, item) in outerArray.enumerated() {
             guard let eventsArray = item as? [[String: Any]] else {
+                #if DEBUG
                 NSLog("⚠️ Segment \(index) is not an array of events, skipping")
+                #endif
                 continue
             }
 
             let globalSegmentIndex = segmentOffset + index
+            #if DEBUG
             NSLog("📦 Segment \(globalSegmentIndex) has \(eventsArray.count) events")
+            #endif
 
             // Parse events for this segment
             let events = eventsArray.enumerated().compactMap { eventIndex, eventData -> ReplayEvent? in
@@ -276,7 +288,9 @@ class SentryAPIService: ObservableObject {
             segments.append(segment)
         }
 
+        #if DEBUG
         NSLog("✅ Parsed \(segments.count) segments with total of \(segments.reduce(0) { $0 + $1.events(useSortedOrder: false).count }) events")
+        #endif
 
         return PaginatedResponse(segments: segments, nextCursor: nextCursor, hasMore: hasMore)
     }

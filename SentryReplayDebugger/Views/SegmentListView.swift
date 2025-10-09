@@ -145,8 +145,12 @@ struct SegmentListView: View {
                     .frame(height: 44)
                     .padding(.horizontal, 16)
                     
-                    List(Array(selectedSegment.events(useSortedOrder: useSortedOrder).enumerated()), id: \.element.id) { index, event in
-                        let previousEvent = index > 0 ? selectedSegment.events(useSortedOrder: useSortedOrder)[index - 1] : nil
+                    // OPTIMIZATION: Cache enumerated array to avoid recreating on every render
+                    let events = selectedSegment.events(useSortedOrder: useSortedOrder)
+                    let eventsArray = Array(events.enumerated())
+
+                    List(eventsArray, id: \.element.id) { index, event in
+                        let previousEvent = index > 0 ? events[index - 1] : nil
                         EventRowView(event: event, isSelected: selectedEvent?.id == event.id, previousEvent: previousEvent)
                             .contentShape(Rectangle())
                             .onTapGesture {

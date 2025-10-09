@@ -1270,8 +1270,12 @@ struct ContentView: View {
                     .frame(height: 44)
                     .padding(.trailing, 16)
                     
-                    List(Array(displayedSegment.events(useSortedOrder: useSortedOrder).enumerated()), id: \.element.id) { index, event in
-                        let previousEvent: ReplayEvent? = index > 0 ? displayedSegment.events(useSortedOrder: useSortedOrder)[index - 1] : nil
+                    // OPTIMIZATION: Cache enumerated array to avoid recreating on every render
+                    let events = displayedSegment.events(useSortedOrder: useSortedOrder)
+                    let eventsArray = Array(events.enumerated())
+
+                    List(eventsArray, id: \.element.id) { index, event in
+                        let previousEvent: ReplayEvent? = index > 0 ? events[index - 1] : nil
                         EventRowView(
                             event: event,
                             isSelected: selectedEvent?.id == event.id,
