@@ -455,6 +455,11 @@ struct ContentView: View {
             TextField("Search all segments and events...", text: $globalSearchQuery)
                 .textFieldStyle(.plain)
                 .focused($searchFieldFocused)
+                .onSubmit {
+                    if !searchMatches.isEmpty {
+                        nextSearchMatch()
+                    }
+                }
 
             if !globalSearchQuery.isEmpty {
                 Text("\(currentSearchIndex + 1) of \(searchMatches.count)")
