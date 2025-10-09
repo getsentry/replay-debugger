@@ -596,12 +596,18 @@ struct WebView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        NSLog("🔄 WebView updateNSView called with HTML length: \(html.count)")
+        // Only update if HTML actually changed
+        if context.coordinator.lastHTML != html {
+            NSLog("🔄 WebView updateNSView called with HTML length: \(html.count)")
+            context.coordinator.lastHTML = html
 
-        // Write HTML to debug file
-        writeDebugHTML(html)
+            // Write HTML to debug file
+            writeDebugHTML(html)
 
-        webView.loadHTMLString(html, baseURL: nil)
+            webView.loadHTMLString(html, baseURL: nil)
+        } else {
+            NSLog("⏭️ WebView updateNSView skipped - HTML unchanged")
+        }
     }
 
     private func writeDebugHTML(_ html: String) {
@@ -633,6 +639,8 @@ struct WebView: NSViewRepresentable {
     }
 
     class Coordinator: NSObject, WKNavigationDelegate {
+        var lastHTML: String = ""
+
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             // Only allow loading the initial HTML, block all other navigation
             if navigationAction.navigationType == .other {

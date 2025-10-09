@@ -9,6 +9,18 @@ class DOMNode {
         self.id = id
     }
 
+    /// Get the root document node (for index operations)
+    var rootDocument: DOMDocumentNode? {
+        var current: DOMNode? = self
+        while let node = current {
+            if let doc = node as? DOMDocumentNode {
+                return doc
+            }
+            current = node.parent
+        }
+        return nil
+    }
+
     /// Recursively serialize this node and its children to HTML
     func toHTML() -> String {
         fatalError("toHTML() must be implemented by subclass")
@@ -44,6 +56,9 @@ class DOMContainerNode: DOMNode {
     func appendChild(_ child: DOMNode) {
         child.parent = self
         childNodes.append(child)
+
+        // Register in root document's index if available
+        rootDocument?.registerNode(child)
     }
 
     func insertBefore(_ child: DOMNode, before: DOMNode?) {
@@ -55,6 +70,9 @@ class DOMContainerNode: DOMNode {
         } else {
             childNodes.append(child)
         }
+
+        // Register in root document's index if available
+        rootDocument?.registerNode(child)
     }
 
     func insertAfter(_ child: DOMNode, after: DOMNode?) {
@@ -66,10 +84,16 @@ class DOMContainerNode: DOMNode {
         } else {
             childNodes.insert(child, at: 0)
         }
+
+        // Register in root document's index if available
+        rootDocument?.registerNode(child)
     }
 
     func removeChild(_ child: DOMNode) {
         if let index = childNodes.firstIndex(where: { $0.id == child.id }) {
+            // Unregister from root document's index if available
+            rootDocument?.unregisterNode(childNodes[index])
+
             childNodes[index].parent = nil
             childNodes.remove(at: index)
         }
@@ -78,6 +102,45 @@ class DOMContainerNode: DOMNode {
 
 /// Document node (type 0)
 class DOMDocumentNode: DOMContainerNode {
+    /// Fast lookup index: maps node ID to node reference
+    /// This turns O(n) findNode operations into O(1)
+    private var nodeIndex: [Int: DOMNode] = [:]
+
+    override init(id: Int) {
+        super.init(id: id)
+        // Register self in index
+        nodeIndex[id] = self
+    }
+
+    /// Register a node in the index (internal use)
+    func registerNode(_ node: DOMNode) {
+        nodeIndex[node.id] = node
+
+        // Also register all children recursively
+        if let container = node as? DOMContainerNode {
+            for child in container.childNodes {
+                registerNode(child)
+            }
+        }
+    }
+
+    /// Unregister a node from the index (internal use)
+    func unregisterNode(_ node: DOMNode) {
+        nodeIndex.removeValue(forKey: node.id)
+
+        // Also unregister all children recursively
+        if let container = node as? DOMContainerNode {
+            for child in container.childNodes {
+                unregisterNode(child)
+            }
+        }
+    }
+
+    /// Fast O(1) node lookup using index
+    override func findNode(byId id: Int) -> DOMNode? {
+        return nodeIndex[id]
+    }
+
     override func toHTML() -> String {
         return childNodes.map { $0.toHTML() }.joined()
     }
