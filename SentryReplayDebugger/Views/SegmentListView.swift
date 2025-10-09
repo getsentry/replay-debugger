@@ -193,6 +193,7 @@ struct SegmentListView: View {
                     .padding(.horizontal, 16)
                     
                     JSONInspectorView(data: selectedEvent.data, onHighlightElement: nil, onFindInSource: nil)
+                        .id(selectedEvent.id)
                         .padding(.horizontal, 16)
                 } else {
                     VStack {
@@ -509,13 +510,47 @@ struct EventRowView: View {
         return "\(timeString).\(String(format: "%03d", milliseconds))"
     }
 
+    private func extractMutationCount(from event: ReplayEvent) -> Int? {
+        // Only check Mutation events (type 3, source 0)
+        guard event.type == 3,
+              let source = event.data["source"] as? Int,
+              source == 0 else {
+            return nil
+        }
+
+        return ContentView.calculateMutationCount(eventData: event.data)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(ContentView.displayName(for: event))
-                        .font(.system(.body, design: .monospaced))
-                        .fontWeight(.medium)
+                    HStack(spacing: 4) {
+                        Text(ContentView.displayName(for: event))
+                            .font(.system(.body, design: .monospaced))
+                            .fontWeight(.medium)
+
+                        // Show warning indicator for high mutation counts
+                        if let mutationCount = extractMutationCount(from: event) {
+                            Group {
+                                let formatter = NumberFormatter()
+                                let _ = { formatter.numberStyle = .decimal }()
+                                let formattedCount = formatter.string(from: NSNumber(value: mutationCount)) ?? "\(mutationCount)"
+
+                                if mutationCount > 5000 {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                        .help("Severe: \(formattedCount) mutations")
+                                } else if mutationCount > 1000 {
+                                    Image(systemName: "exclamationmark.triangle")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                        .help("Warning: \(formattedCount) mutations")
+                                }
+                            }
+                        }
+                    }
 
                     if let subheading = eventSubheading {
                         Text(subheading)

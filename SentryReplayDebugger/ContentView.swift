@@ -129,6 +129,14 @@ struct ContentView: View {
     @State private var htmlRenderStateCache: [Int: RRWebEventProcessor.RenderState] = [:]
     private let cacheInterval: Int = 250
 
+    // Performance: Cache filtered segments to avoid recomputation
+    @State private var cachedFilteredSegments: [ReplaySegment] = []
+    @State private var filterCacheKey: String = ""
+
+    // Performance: Cache displayedSegment lookup
+    @State private var cachedDisplayedSegment: ReplaySegment? = nil
+    @State private var cachedDisplayedSegmentId: String? = nil
+
     func setTimestampFilter(_ timestamp: Date) {
         timestampFilterValue = String(format: "%.3f", timestamp.timeIntervalSince1970)
     }
@@ -200,57 +208,74 @@ struct ContentView: View {
     }
     
     private var filteredSegments: [ReplaySegment] {
+        // Generate cache key from filter state
+        let currentCacheKey = "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(timestampFilterOperator)-\(timestampFilterValue)"
+
+        // Return cached result if key matches
+        if currentCacheKey == filterCacheKey {
+            return cachedFilteredSegments
+        }
+
         // Early return if no filters are active
         let hasEventTypeFilters = enabledEventTypes.count < allEventTypes.count
         let hasIncrementalSourceFilters = enabledIncrementalSources.count < incrementalSourceTypes.count
         let hasTimestampFilter = parsedTimestampFilter != nil
 
+        let result: [ReplaySegment]
         if !hasEventTypeFilters && !hasIncrementalSourceFilters && !hasTimestampFilter {
-            return segments
-        }
-
-        return segments.map { segment in
-            // OPTIMIZATION: Store sortedEvents in local variable
-            let sortedEvents = segment.sortedEvents
-            let filteredEvents = sortedEvents.filter { event in
-                // Apply event type filter - only show events whose type is enabled
-                if hasEventTypeFilters {
-                    let baseType = ContentView.baseTypeName(for: event.type)
-                    if !enabledEventTypes.contains(baseType) {
-                        return false
-                    }
-                }
-
-                // Apply IncrementalSnapshot source filter if this is an IncrementalSnapshot
-                // Only check if some sources are disabled
-                if hasIncrementalSourceFilters && event.type == 3 {
-                    if let source = event.data["source"] as? Int {
-                        if !enabledIncrementalSources.contains(source) {
+            result = segments
+        } else {
+            result = segments.map { segment in
+                // OPTIMIZATION: Store sortedEvents in local variable
+                let sortedEvents = segment.sortedEvents
+                let filteredEvents = sortedEvents.filter { event in
+                    // Apply event type filter - only show events whose type is enabled
+                    if hasEventTypeFilters {
+                        let baseType = ContentView.baseTypeName(for: event.type)
+                        if !enabledEventTypes.contains(baseType) {
                             return false
                         }
                     }
-                }
 
-                // Apply timestamp filter
-                if let timestampFilter = parsedTimestampFilter {
-                    let eventTimestamp = event.timestamp.timeIntervalSince1970
-                    if timestampFilterOperator == ">" {
-                        if eventTimestamp <= timestampFilter {
-                            return false
-                        }
-                    } else {
-                        if eventTimestamp >= timestampFilter {
-                            return false
+                    // Apply IncrementalSnapshot source filter if this is an IncrementalSnapshot
+                    // Only check if some sources are disabled
+                    if hasIncrementalSourceFilters && event.type == 3 {
+                        if let source = event.data["source"] as? Int {
+                            if !enabledIncrementalSources.contains(source) {
+                                return false
+                            }
                         }
                     }
+
+                    // Apply timestamp filter
+                    if let timestampFilter = parsedTimestampFilter {
+                        let eventTimestamp = event.timestamp.timeIntervalSince1970
+                        if timestampFilterOperator == ">" {
+                            if eventTimestamp <= timestampFilter {
+                                return false
+                            }
+                        } else {
+                            if eventTimestamp >= timestampFilter {
+                                return false
+                            }
+                        }
+                    }
+
+                    return true
                 }
 
-                return true
+                // Keep segment even if no events match - just show empty event list
+                return ReplaySegment(id: segment.id, timestamp: segment.timestamp, events: filteredEvents)
             }
-
-            // Keep segment even if no events match - just show empty event list
-            return ReplaySegment(id: segment.id, timestamp: segment.timestamp, events: filteredEvents)
         }
+
+        // Update cache
+        DispatchQueue.main.async {
+            self.cachedFilteredSegments = result
+            self.filterCacheKey = currentCacheKey
+        }
+
+        return result
     }
     
     var body: some View {
@@ -553,6 +578,7 @@ struct ContentView: View {
                         .padding()
 
                         JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement, onFindInSource: findInSource)
+                            .id(selectedEvent.id)
                     }
                 } else {
                     ContentUnavailableView(
@@ -1180,7 +1206,7 @@ struct ContentView: View {
         guard let source = eventData["source"] else {
             return "IncrementalSnapshot"
         }
-        
+
         // Handle numeric source values
         let sourceNumber: Int
         if let stringValue = source as? String, let intValue = Int(stringValue) {
@@ -1190,10 +1216,19 @@ struct ContentView: View {
         } else {
             return "IncrementalSnapshot"
         }
-        
+
         // Map to rrweb IncrementalSource enum
         switch sourceNumber {
-        case 0: return "Mutation"
+        case 0:
+            // For Mutation events, calculate total mutation count
+            let mutationCount = calculateMutationCount(eventData: eventData)
+            if mutationCount > 0 {
+                let formatter = NumberFormatter()
+                formatter.numberStyle = .decimal
+                let formattedCount = formatter.string(from: NSNumber(value: mutationCount)) ?? "\(mutationCount)"
+                return "Mutation (\(formattedCount))"
+            }
+            return "Mutation"
         case 1: return "MouseMove"
         case 2: return "MouseInteraction"
         case 3: return "Scroll"
@@ -1212,6 +1247,25 @@ struct ContentView: View {
         case 16: return "CustomElement"
         default: return "IncrementalSnapshot"
         }
+    }
+
+    static func calculateMutationCount(eventData: [String: Any]) -> Int {
+        var count = 0
+
+        if let adds = eventData["adds"] as? [[String: Any]] {
+            count += adds.count
+        }
+        if let removes = eventData["removes"] as? [[String: Any]] {
+            count += removes.count
+        }
+        if let attributes = eventData["attributes"] as? [[String: Any]] {
+            count += attributes.count
+        }
+        if let texts = eventData["texts"] as? [[String: Any]] {
+            count += texts.count
+        }
+
+        return count
     }
     
     static func customEventDisplayName(eventData: [String: Any]) -> String {
@@ -1239,8 +1293,32 @@ struct ContentView: View {
     }
     
     private var displayedSegment: ReplaySegment? {
-        guard let selectedSegment = selectedSegment else { return nil }
-        return filteredSegments.first(where: { $0.id == selectedSegment.id })
+        guard let selectedSegment = selectedSegment else {
+            // Clear cache when no segment selected
+            if cachedDisplayedSegmentId != nil {
+                DispatchQueue.main.async {
+                    self.cachedDisplayedSegment = nil
+                    self.cachedDisplayedSegmentId = nil
+                }
+            }
+            return nil
+        }
+
+        // Return cached result if segment ID matches
+        if cachedDisplayedSegmentId == selectedSegment.id {
+            return cachedDisplayedSegment
+        }
+
+        // Lookup segment in filtered list
+        let result = filteredSegments.first(where: { $0.id == selectedSegment.id })
+
+        // Update cache
+        DispatchQueue.main.async {
+            self.cachedDisplayedSegment = result
+            self.cachedDisplayedSegmentId = selectedSegment.id
+        }
+
+        return result
     }
     
     @ViewBuilder
@@ -1340,6 +1418,7 @@ struct ContentView: View {
                                 .padding(.horizontal, 16)
 
                                 JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement, onFindInSource: findInSource)
+                            .id(selectedEvent.id)
                                     .padding(.horizontal, 16)
                             }
                         } else {
