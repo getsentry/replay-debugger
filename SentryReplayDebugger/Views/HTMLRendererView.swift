@@ -11,7 +11,8 @@ struct HTMLRenderPanel: View {
     @Binding var highlightedNodeId: Int?
     let onHighlightError: (String) -> Void
     let panelId: String = UUID().uuidString
-    @State private var showSource: Bool = false
+    @Binding var showSource: Bool
+    @Binding var sourceSearchQuery: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -41,6 +42,7 @@ struct HTMLRenderPanel: View {
                 cacheInterval: cacheInterval,
                 panelId: panelId,
                 showSource: $showSource,
+                sourceSearchQuery: $sourceSearchQuery,
                 highlightedNodeId: $highlightedNodeId,
                 onHighlightError: onHighlightError
             )
@@ -57,6 +59,7 @@ struct HTMLRendererView: View {
     let cacheInterval: Int
     let panelId: String
     @Binding var showSource: Bool
+    @Binding var sourceSearchQuery: String
     @Binding var highlightedNodeId: Int?
     let onHighlightError: (String) -> Void
     @State private var renderState: RRWebEventProcessor.RenderState = RRWebEventProcessor.RenderState()
@@ -95,7 +98,7 @@ struct HTMLRendererView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let html = renderState.html {
                 if showSource {
-                    HTMLSourceView(html: html)
+                    HTMLSourceView(html: html, searchQuery: $sourceSearchQuery)
                 } else {
                     ScaledWebView(
                         html: html,

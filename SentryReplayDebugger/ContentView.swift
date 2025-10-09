@@ -103,6 +103,10 @@ struct ContentView: View {
     @State private var showInspector = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
+    // HTML Source view state
+    @State private var showHTMLSource: Bool = false
+    @State private var htmlSourceSearchQuery: String = ""
+
     // Global search
     @State private var showGlobalSearch = false
     @State private var globalSearchQuery: String = ""
@@ -548,7 +552,7 @@ struct ContentView: View {
                         }
                         .padding()
 
-                        JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement)
+                        JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement, onFindInSource: findInSource)
                     }
                 } else {
                     ContentUnavailableView(
@@ -571,7 +575,9 @@ struct ContentView: View {
                         renderStateCache: $htmlRenderStateCache,
                         cacheInterval: cacheInterval,
                         highlightedNodeId: $highlightedNodeId,
-                        onHighlightError: showHighlightErrorAlert
+                        onHighlightError: showHighlightErrorAlert,
+                        showSource: $showHTMLSource,
+                        sourceSearchQuery: $htmlSourceSearchQuery
                     )
                 } else {
                     VStack {
@@ -748,6 +754,13 @@ struct ContentView: View {
     private func highlightElement(nodeId: Int) {
         highlightedNodeId = nodeId
         showHighlightError = false
+    }
+
+    private func findInSource(nodeId: Int) {
+        // Switch to Source tab
+        showHTMLSource = true
+        // Search for the node ID in HTML
+        htmlSourceSearchQuery = "data-rr-id=\"\(nodeId)\""
     }
 
     private func showHighlightErrorAlert(message: String) {
@@ -1326,7 +1339,7 @@ struct ContentView: View {
                                 .frame(height: 44)
                                 .padding(.horizontal, 16)
 
-                                JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement)
+                                JSONInspectorView(data: selectedEvent.data, onHighlightElement: highlightElement, onFindInSource: findInSource)
                                     .padding(.horizontal, 16)
                             }
                         } else {
@@ -1360,7 +1373,9 @@ struct ContentView: View {
                                 renderStateCache: $htmlRenderStateCache,
                                 cacheInterval: cacheInterval,
                                 highlightedNodeId: $highlightedNodeId,
-                                onHighlightError: showHighlightErrorAlert
+                                onHighlightError: showHighlightErrorAlert,
+                                showSource: $showHTMLSource,
+                                sourceSearchQuery: $htmlSourceSearchQuery
                             )
                         } else {
                             VStack {

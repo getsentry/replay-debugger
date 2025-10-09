@@ -3,6 +3,7 @@ import SwiftUI
 struct JSONInspectorView: View {
     let data: [String: Any]
     let onHighlightElement: ((Int) -> Void)?
+    let onFindInSource: ((Int) -> Void)?
     @State private var expandedKeys: Set<String> = []
     @State private var largeArrayLimits: [String: Int] = [:]  // Track display limits for large arrays
 
@@ -18,7 +19,8 @@ struct JSONInspectorView: View {
                         largeArrayLimits: $largeArrayLimits,
                         parentKey: nil,
                         rootData: data,
-                        onHighlightElement: onHighlightElement
+                        onHighlightElement: onHighlightElement,
+                        onFindInSource: onFindInSource
                     )
                 }
             }
@@ -56,8 +58,9 @@ struct JSONKeyValueView: View {
     let parentKey: String?
     let rootData: [String: Any]
     let onHighlightElement: ((Int) -> Void)?
+    let onFindInSource: ((Int) -> Void)?
 
-    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, largeArrayLimits: Binding<[String: Int]>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil) {
+    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, largeArrayLimits: Binding<[String: Int]>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil, onFindInSource: ((Int) -> Void)? = nil) {
         self.key = key
         self.value = value
         self.level = level
@@ -66,6 +69,7 @@ struct JSONKeyValueView: View {
         self.parentKey = parentKey
         self.rootData = rootData
         self.onHighlightElement = onHighlightElement
+        self.onFindInSource = onFindInSource
     }
     
     private var isExpanded: Bool {
@@ -130,12 +134,22 @@ struct JSONKeyValueView: View {
                 isHovered = hovering
             }
             .contextMenu {
-                if key == "id" || key.hasSuffix(".id") {
-                    if let idValue = extractIdValue(from: value), onHighlightElement != nil {
-                        Button(action: {
-                            onHighlightElement?(idValue)
-                        }) {
-                            Label("Highlight Element", systemImage: "scope")
+                if key == "id" || key.hasSuffix(".id") || key == "nextId" || key == "parentId" {
+                    if let idValue = extractIdValue(from: value) {
+                        if onHighlightElement != nil {
+                            Button(action: {
+                                onHighlightElement?(idValue)
+                            }) {
+                                Label("Highlight Element", systemImage: "scope")
+                            }
+                        }
+
+                        if onFindInSource != nil {
+                            Button(action: {
+                                onFindInSource?(idValue)
+                            }) {
+                                Label("Find in Source", systemImage: "doc.text.magnifyingglass")
+                            }
                         }
 
                         Divider()
@@ -430,7 +444,8 @@ struct JSONKeyValueView: View {
                     largeArrayLimits: $largeArrayLimits,
                     parentKey: key,
                     rootData: rootData,
-                    onHighlightElement: onHighlightElement
+                    onHighlightElement: onHighlightElement,
+                    onFindInSource: onFindInSource
                 )
             }
         } else if let array = value as? [Any] {
@@ -457,7 +472,8 @@ struct JSONKeyValueView: View {
                         largeArrayLimits: $largeArrayLimits,
                         chunkKeyPath: chunkKeyPath,
                         rootData: rootData,
-                        onHighlightElement: onHighlightElement
+                        onHighlightElement: onHighlightElement,
+                        onFindInSource: onFindInSource
                     )
                 }
             } else {
@@ -471,7 +487,8 @@ struct JSONKeyValueView: View {
                         largeArrayLimits: $largeArrayLimits,
                         parentKey: key,
                         rootData: rootData,
-                        onHighlightElement: onHighlightElement
+                        onHighlightElement: onHighlightElement,
+                        onFindInSource: onFindInSource
                     )
                 }
             }
@@ -689,6 +706,7 @@ struct ArrayChunkView: View {
     let chunkKeyPath: String
     let rootData: [String: Any]
     let onHighlightElement: ((Int) -> Void)?
+    let onFindInSource: ((Int) -> Void)?
     @State private var isHovered = false
 
     private var isExpanded: Bool {
@@ -754,7 +772,8 @@ struct ArrayChunkView: View {
                         largeArrayLimits: $largeArrayLimits,
                         parentKey: chunkKey,
                         rootData: rootData,
-                        onHighlightElement: onHighlightElement
+                        onHighlightElement: onHighlightElement,
+                        onFindInSource: onFindInSource
                     )
                 }
             }
@@ -772,6 +791,6 @@ struct ArrayChunkView: View {
         "metadata": ["browser": "Chrome", "version": "98.0"],
         "active": true,
         "largeArray": largeArray
-    ], onHighlightElement: nil)
+    ], onHighlightElement: nil, onFindInSource: nil)
     .frame(width: 400, height: 300)
 }

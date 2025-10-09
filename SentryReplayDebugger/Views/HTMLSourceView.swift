@@ -3,7 +3,7 @@ import AppKit
 
 struct HTMLSourceView: View {
     let html: String
-    @State private var searchQuery: String = ""
+    @Binding var searchQuery: String
     @State private var currentMatchIndex: Int = 0
     @State private var totalMatches: Int = 0
 
