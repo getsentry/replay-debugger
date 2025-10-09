@@ -4,6 +4,7 @@ struct JSONInspectorView: View {
     let data: [String: Any]
     let onHighlightElement: ((Int) -> Void)?
     @State private var expandedKeys: Set<String> = []
+    @State private var largeArrayLimits: [String: Int] = [:]  // Track display limits for large arrays
 
     var body: some View {
         ScrollView {
@@ -14,6 +15,7 @@ struct JSONInspectorView: View {
                         value: data[key] ?? "null",
                         level: 0,
                         expandedKeys: $expandedKeys,
+                        largeArrayLimits: $largeArrayLimits,
                         parentKey: nil,
                         rootData: data,
                         onHighlightElement: onHighlightElement
@@ -49,16 +51,18 @@ struct JSONKeyValueView: View {
     let value: Any
     let level: Int
     @Binding var expandedKeys: Set<String>
+    @Binding var largeArrayLimits: [String: Int]
     @State private var isHovered = false
     let parentKey: String?
     let rootData: [String: Any]
     let onHighlightElement: ((Int) -> Void)?
 
-    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil) {
+    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, largeArrayLimits: Binding<[String: Int]>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil) {
         self.key = key
         self.value = value
         self.level = level
         self._expandedKeys = expandedKeys
+        self._largeArrayLimits = largeArrayLimits
         self.parentKey = parentKey
         self.rootData = rootData
         self.onHighlightElement = onHighlightElement
@@ -423,22 +427,53 @@ struct JSONKeyValueView: View {
                     value: dict[nestedKey] ?? NSNull(),
                     level: level + 1,
                     expandedKeys: $expandedKeys,
+                    largeArrayLimits: $largeArrayLimits,
                     parentKey: key,
                     rootData: rootData,
                     onHighlightElement: onHighlightElement
                 )
             }
         } else if let array = value as? [Any] {
-            ForEach(Array(array.enumerated()), id: \.offset) { index, item in
-                JSONKeyValueView(
-                    key: "\(index)",
-                    value: item,
-                    level: level + 1,
-                    expandedKeys: $expandedKeys,
-                    parentKey: key,
-                    rootData: rootData,
-                    onHighlightElement: onHighlightElement
-                )
+            if array.count > 100 {
+                // Split into chunks of 100
+                let chunkSize = 100
+                let chunks = stride(from: 0, to: array.count, by: chunkSize).map { startIndex in
+                    let endIndex = min(startIndex + chunkSize - 1, array.count - 1)
+                    return (startIndex, endIndex)
+                }
+
+                ForEach(Array(chunks.enumerated()), id: \.offset) { _, chunk in
+                    let (startIndex, endIndex) = chunk
+                    let chunkKey = "[\(startIndex) ... \(endIndex)]"
+                    let chunkKeyPath = "\(level + 1)-\(chunkKey)"
+                    let chunkArray = Array(array[startIndex...endIndex])
+
+                    ArrayChunkView(
+                        chunkKey: chunkKey,
+                        chunkArray: chunkArray,
+                        startIndex: startIndex,
+                        level: level + 1,
+                        expandedKeys: $expandedKeys,
+                        largeArrayLimits: $largeArrayLimits,
+                        chunkKeyPath: chunkKeyPath,
+                        rootData: rootData,
+                        onHighlightElement: onHighlightElement
+                    )
+                }
+            } else {
+                // Small arrays: render directly
+                ForEach(0..<array.count, id: \.self) { index in
+                    JSONKeyValueView(
+                        key: "\(index)",
+                        value: array[index],
+                        level: level + 1,
+                        expandedKeys: $expandedKeys,
+                        largeArrayLimits: $largeArrayLimits,
+                        parentKey: key,
+                        rootData: rootData,
+                        onHighlightElement: onHighlightElement
+                    )
+                }
             }
         }
     }
@@ -644,13 +679,99 @@ struct JSONKeyValueView: View {
     }
 }
 
+struct ArrayChunkView: View {
+    let chunkKey: String
+    let chunkArray: [Any]
+    let startIndex: Int
+    let level: Int
+    @Binding var expandedKeys: Set<String>
+    @Binding var largeArrayLimits: [String: Int]
+    let chunkKeyPath: String
+    let rootData: [String: Any]
+    let onHighlightElement: ((Int) -> Void)?
+    @State private var isHovered = false
+
+    private var isExpanded: Bool {
+        expandedKeys.contains(chunkKeyPath)
+    }
+
+    private var indentation: CGFloat {
+        CGFloat(level * 12)
+    }
+
+    private func toggleExpansion() {
+        if isExpanded {
+            expandedKeys.remove(chunkKeyPath)
+        } else {
+            expandedKeys.insert(chunkKeyPath)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Chunk header
+            HStack(spacing: 0) {
+                // Indentation spacer
+                Color.clear.frame(width: indentation, height: 1)
+
+                // Expand/collapse triangle
+                Button(action: toggleExpansion) {
+                    Image(systemName: isExpanded ? "arrowtriangle.down.fill" : "arrowtriangle.right.fill")
+                        .font(.system(size: 8))
+                        .foregroundColor(Color(red: 0.4, green: 0.4, blue: 0.4))
+                        .frame(width: 12, height: 16)
+                }
+                .buttonStyle(.plain)
+
+                // Chunk label
+                Button(action: toggleExpansion) {
+                    HStack(spacing: 0) {
+                        Text(chunkKey)
+                            .foregroundColor(Color(red: 0.55, green: 0.06, blue: 0.55))
+                            .fontWeight(.medium)
+
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+                .contentShape(Rectangle())
+            }
+            .frame(height: 16)
+            .background(isHovered ? Color.black.opacity(0.05) : Color.clear)
+            .onHover { hovering in
+                isHovered = hovering
+            }
+
+            // Expanded chunk content
+            if isExpanded {
+                ForEach(0..<chunkArray.count, id: \.self) { relativeIndex in
+                    let absoluteIndex = startIndex + relativeIndex
+                    JSONKeyValueView(
+                        key: "\(absoluteIndex)",
+                        value: chunkArray[relativeIndex],
+                        level: level + 1,
+                        expandedKeys: $expandedKeys,
+                        largeArrayLimits: $largeArrayLimits,
+                        parentKey: chunkKey,
+                        rootData: rootData,
+                        onHighlightElement: onHighlightElement
+                    )
+                }
+            }
+        }
+    }
+}
+
 #Preview {
+    @Previewable @State var largeArray = (0..<3000).map { $0 }
+
     JSONInspectorView(data: [
         "type": "click",
         "timestamp": 1641234567,
         "coordinates": ["x": 100, "y": 200],
         "metadata": ["browser": "Chrome", "version": "98.0"],
-        "active": true
+        "active": true,
+        "largeArray": largeArray
     ], onHighlightElement: nil)
     .frame(width: 400, height: 300)
 }
