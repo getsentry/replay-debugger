@@ -208,12 +208,13 @@ struct ContentView: View {
         }
     }
     
-    private var filteredSegments: [ReplaySegment] {
-        // Generate cache key from filter state
-        let currentCacheKey = "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(timestampFilterOperator)-\(timestampFilterValue)"
+    private var currentFilterCacheKey: String {
+        "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(timestampFilterOperator)-\(timestampFilterValue)"
+    }
 
+    private var filteredSegments: [ReplaySegment] {
         // Return cached result if key matches
-        if currentCacheKey == filterCacheKey {
+        if currentFilterCacheKey == filterCacheKey {
             return cachedFilteredSegments
         }
 
@@ -222,61 +223,65 @@ struct ContentView: View {
         let hasIncrementalSourceFilters = enabledIncrementalSources.count < incrementalSourceTypes.count
         let hasTimestampFilter = parsedTimestampFilter != nil
 
-        let result: [ReplaySegment]
         if !hasEventTypeFilters && !hasIncrementalSourceFilters && !hasTimestampFilter {
-            result = segments
-        } else {
-            result = segments.map { segment in
-                // OPTIMIZATION: Store sortedEvents in local variable
-                let sortedEvents = segment.sortedEvents
-                let filteredEvents = sortedEvents.filter { event in
-                    // Apply event type filter - only show events whose type is enabled
-                    if hasEventTypeFilters {
-                        let baseType = ContentView.baseTypeName(for: event.type)
-                        if !enabledEventTypes.contains(baseType) {
+            return segments
+        }
+
+        return segments.map { segment in
+            // OPTIMIZATION: Store sortedEvents in local variable
+            let sortedEvents = segment.sortedEvents
+            let filteredEvents = sortedEvents.filter { event in
+                // Apply event type filter - only show events whose type is enabled
+                if hasEventTypeFilters {
+                    let baseType = ContentView.baseTypeName(for: event.type)
+                    if !enabledEventTypes.contains(baseType) {
+                        return false
+                    }
+                }
+
+                // Apply IncrementalSnapshot source filter if this is an IncrementalSnapshot
+                // Only check if some sources are disabled
+                if hasIncrementalSourceFilters && event.type == 3 {
+                    if let source = event.data["source"] as? Int {
+                        if !enabledIncrementalSources.contains(source) {
                             return false
                         }
                     }
-
-                    // Apply IncrementalSnapshot source filter if this is an IncrementalSnapshot
-                    // Only check if some sources are disabled
-                    if hasIncrementalSourceFilters && event.type == 3 {
-                        if let source = event.data["source"] as? Int {
-                            if !enabledIncrementalSources.contains(source) {
-                                return false
-                            }
-                        }
-                    }
-
-                    // Apply timestamp filter
-                    if let timestampFilter = parsedTimestampFilter {
-                        let eventTimestamp = event.timestamp.timeIntervalSince1970
-                        if timestampFilterOperator == ">" {
-                            if eventTimestamp <= timestampFilter {
-                                return false
-                            }
-                        } else {
-                            if eventTimestamp >= timestampFilter {
-                                return false
-                            }
-                        }
-                    }
-
-                    return true
                 }
 
-                // Keep segment even if no events match - just show empty event list
-                return ReplaySegment(id: segment.id, timestamp: segment.timestamp, events: filteredEvents)
+                // Apply timestamp filter
+                if let timestampFilter = parsedTimestampFilter {
+                    let eventTimestamp = event.timestamp.timeIntervalSince1970
+                    if timestampFilterOperator == ">" {
+                        if eventTimestamp <= timestampFilter {
+                            return false
+                        }
+                    } else {
+                        if eventTimestamp >= timestampFilter {
+                            return false
+                        }
+                    }
+                }
+
+                return true
             }
-        }
 
-        // Update cache
-        DispatchQueue.main.async {
-            self.cachedFilteredSegments = result
-            self.filterCacheKey = currentCacheKey
+            // Keep segment even if no events match - just show empty event list
+            return ReplaySegment(id: segment.id, timestamp: segment.timestamp, events: filteredEvents)
         }
+    }
 
-        return result
+    private func updateFilterCache() {
+        let newKey = currentFilterCacheKey
+        if newKey != filterCacheKey {
+            // Invalidate cache first to force recomputation
+            filterCacheKey = ""
+            cachedFilteredSegments = []
+
+            // Now recompute with new key
+            cachedFilteredSegments = filteredSegments
+            filterCacheKey = newKey
+        }
     }
     
     var body: some View {
@@ -361,19 +366,37 @@ struct ContentView: View {
             // Update event cache when segments change
             updateEventCache()
 
+            // Update filter cache when segments change
+            updateFilterCache()
+            updateDisplayedSegmentCache()
+
             if !segments.isEmpty && selectedSegment == nil {
                 selectedSegment = filteredSegments.first
                 selectedEvent = displayedSegment?.events(useSortedOrder: useSortedOrder).first
             }
         }
         .onChange(of: enabledEventTypes) {
+            updateFilterCache()
+            updateDisplayedSegmentCache()
             updateSelectedSegmentAfterFilter()
         }
         .onChange(of: enabledIncrementalSources) {
+            updateFilterCache()
+            updateDisplayedSegmentCache()
             updateSelectedSegmentAfterFilter()
         }
         .onChange(of: timestampFilterValue) {
+            updateFilterCache()
+            updateDisplayedSegmentCache()
             updateSelectedSegmentAfterFilter()
+        }
+        .onChange(of: timestampFilterOperator) {
+            updateFilterCache()
+            updateDisplayedSegmentCache()
+            updateSelectedSegmentAfterFilter()
+        }
+        .onChange(of: selectedSegment) {
+            updateDisplayedSegmentCache()
         }
         .onChange(of: globalSearchQuery) {
             performGlobalSearch()
@@ -1302,33 +1325,42 @@ struct ContentView: View {
         return tag
     }
     
+    private var currentDisplayedSegmentCacheKey: String? {
+        guard let selectedSegment = selectedSegment else { return nil }
+        return "\(selectedSegment.id)-\(currentFilterCacheKey)"
+    }
+
     private var displayedSegment: ReplaySegment? {
         guard let selectedSegment = selectedSegment else {
-            // Clear cache when no segment selected
-            if cachedDisplayedSegmentId != nil {
-                DispatchQueue.main.async {
-                    self.cachedDisplayedSegment = nil
-                    self.cachedDisplayedSegmentId = nil
-                }
-            }
             return nil
         }
 
-        // Return cached result if segment ID matches
-        if cachedDisplayedSegmentId == selectedSegment.id {
+        // Return cached result if segment ID and filters match
+        if let cacheKey = currentDisplayedSegmentCacheKey,
+           cachedDisplayedSegmentId == cacheKey {
             return cachedDisplayedSegment
         }
 
         // Lookup segment in filtered list
-        let result = filteredSegments.first(where: { $0.id == selectedSegment.id })
+        return filteredSegments.first(where: { $0.id == selectedSegment.id })
+    }
 
-        // Update cache
-        DispatchQueue.main.async {
-            self.cachedDisplayedSegment = result
-            self.cachedDisplayedSegmentId = selectedSegment.id
+    private func updateDisplayedSegmentCache() {
+        if let cacheKey = currentDisplayedSegmentCacheKey {
+            if cachedDisplayedSegmentId != cacheKey {
+                // Invalidate cache first to force recomputation
+                cachedDisplayedSegmentId = nil
+                cachedDisplayedSegment = nil
+
+                // Now recompute with new key
+                cachedDisplayedSegment = displayedSegment
+                cachedDisplayedSegmentId = cacheKey
+            }
+        } else {
+            // Clear cache when no segment selected
+            cachedDisplayedSegment = nil
+            cachedDisplayedSegmentId = nil
         }
-
-        return result
     }
     
     @ViewBuilder
