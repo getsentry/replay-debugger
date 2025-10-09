@@ -108,6 +108,7 @@ struct ContentView: View {
     @State private var timestampFilterValue: String = ""
     @State private var nodeIdFilterText: String = ""
     @State private var nodeIdFilter: Int? = nil
+    @State private var nodeIdFilterAllReferences: Bool = false
     @State private var highlightedNodeId: Int? = nil
     @State private var showHighlightError: Bool = false
     @State private var highlightErrorMessage: String = ""
@@ -223,16 +224,29 @@ struct ContentView: View {
     }
     
     private var currentFilterCacheKey: String {
-        "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(timestampFilterOperator)-\(timestampFilterValue)-\(nodeIdFilter?.description ?? "")"
+        "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(timestampFilterOperator)-\(timestampFilterValue)-\(nodeIdFilter?.description ?? "")-\(nodeIdFilterAllReferences)"
     }
 
-    private func eventReferencesNode(_ event: ReplayEvent, nodeId: Int) -> Bool {
+    private func eventReferencesNode(_ event: ReplayEvent, nodeId: Int, allReferences: Bool) -> Bool {
         // Recursively search through the event data for any occurrence of the node ID
         func searchForNodeId(in data: Any) -> Bool {
             if let dict = data as? [String: Any] {
                 // Check if this object has an "id" field matching our target
                 if let id = dict["id"] as? Int, id == nodeId {
                     return true
+                }
+
+                // If allReferences is enabled, also check other reference fields
+                if allReferences {
+                    // Common reference field patterns: parentId, nextId, previousId, etc.
+                    for (key, value) in dict {
+                        let lowerKey = key.lowercased()
+                        if (lowerKey.hasSuffix("id") || lowerKey == "id") {
+                            if let refId = value as? Int, refId == nodeId {
+                                return true
+                            }
+                        }
+                    }
                 }
 
                 // Recursively search all values
@@ -343,7 +357,7 @@ struct ContentView: View {
 
                 // Apply node ID filter
                 if let nodeId = nodeIdFilter {
-                    if !eventReferencesNode(event, nodeId: nodeId) {
+                    if !eventReferencesNode(event, nodeId: nodeId, allReferences: nodeIdFilterAllReferences) {
                         return false
                     }
                 }
@@ -734,6 +748,7 @@ struct ContentView: View {
                             onHighlightElement: highlightElement,
                             onFindInSource: findInSource,
                             onFilterForNode: filterForNode,
+                            onFilterForNodeAllReferences: filterForNodeAllReferences,
                             highlightPath: {
                                 // Priority: search match > node filter
                                 if let searchMatch = currentSearchMatch, searchMatch.matchType == .eventData {
@@ -914,6 +929,8 @@ struct ContentView: View {
                         nodeIdFilterText = ""
                     }
                 }
+
+                Toggle("All References", isOn: $nodeIdFilterAllReferences)
             }
 
             // 3. Time Filter
@@ -1020,6 +1037,13 @@ struct ContentView: View {
 
     private func filterForNode(nodeId: Int) {
         nodeIdFilter = nodeId
+        nodeIdFilterAllReferences = false
+        showInspector = true
+    }
+
+    private func filterForNodeAllReferences(nodeId: Int) {
+        nodeIdFilter = nodeId
+        nodeIdFilterAllReferences = true
         showInspector = true
     }
 
@@ -1768,6 +1792,7 @@ struct ContentView: View {
                             onHighlightElement: highlightElement,
                             onFindInSource: findInSource,
                             onFilterForNode: filterForNode,
+                            onFilterForNodeAllReferences: filterForNodeAllReferences,
                             highlightPath: {
                                 // Priority: search match > node filter
                                 if let searchMatch = currentSearchMatch, searchMatch.matchType == .eventData {

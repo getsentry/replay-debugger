@@ -5,6 +5,7 @@ struct JSONInspectorView: View {
     let onHighlightElement: ((Int) -> Void)?
     let onFindInSource: ((Int) -> Void)?
     let onFilterForNode: ((Int) -> Void)?
+    let onFilterForNodeAllReferences: ((Int) -> Void)?
     let highlightPath: [String]?  // Path to highlight (from search)
     let searchQuery: String?  // Query to highlight within the value
     @State private var expandedKeys: Set<String> = []
@@ -27,6 +28,7 @@ struct JSONInspectorView: View {
                             onHighlightElement: onHighlightElement,
                             onFindInSource: onFindInSource,
                             onFilterForNode: onFilterForNode,
+                            onFilterForNodeAllReferences: onFilterForNodeAllReferences,
                             highlightPath: highlightPath,
                             currentPath: [key],
                             searchQuery: searchQuery
@@ -101,11 +103,12 @@ struct JSONKeyValueView: View {
     let onHighlightElement: ((Int) -> Void)?
     let onFindInSource: ((Int) -> Void)?
     let onFilterForNode: ((Int) -> Void)?
+    let onFilterForNodeAllReferences: ((Int) -> Void)?
     let highlightPath: [String]?
     let currentPath: [String]
     let searchQuery: String?
 
-    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, largeArrayLimits: Binding<[String: Int]>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil, onFindInSource: ((Int) -> Void)? = nil, onFilterForNode: ((Int) -> Void)? = nil, highlightPath: [String]? = nil, currentPath: [String] = [], searchQuery: String? = nil) {
+    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, largeArrayLimits: Binding<[String: Int]>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil, onFindInSource: ((Int) -> Void)? = nil, onFilterForNode: ((Int) -> Void)? = nil, onFilterForNodeAllReferences: ((Int) -> Void)? = nil, highlightPath: [String]? = nil, currentPath: [String] = [], searchQuery: String? = nil) {
         self.key = key
         self.value = value
         self.level = level
@@ -116,6 +119,7 @@ struct JSONKeyValueView: View {
         self.onHighlightElement = onHighlightElement
         self.onFindInSource = onFindInSource
         self.onFilterForNode = onFilterForNode
+        self.onFilterForNodeAllReferences = onFilterForNodeAllReferences
         self.highlightPath = highlightPath
         self.currentPath = currentPath
         self.searchQuery = searchQuery
@@ -212,6 +216,14 @@ struct JSONKeyValueView: View {
                                 onFilterForNode?(idValue)
                             }) {
                                 Label("Filter for Node", systemImage: "line.3.horizontal.decrease.circle")
+                            }
+                        }
+
+                        if onFilterForNodeAllReferences != nil {
+                            Button(action: {
+                                onFilterForNodeAllReferences?(idValue)
+                            }) {
+                                Label("Filter for all Node References", systemImage: "line.3.horizontal.decrease.circle.fill")
                             }
                         }
 
@@ -510,6 +522,7 @@ struct JSONKeyValueView: View {
                     onHighlightElement: onHighlightElement,
                     onFindInSource: onFindInSource,
                     onFilterForNode: onFilterForNode,
+                    onFilterForNodeAllReferences: onFilterForNodeAllReferences,
                     highlightPath: highlightPath,
                     currentPath: currentPath + [nestedKey],
                     searchQuery: searchQuery
@@ -542,6 +555,7 @@ struct JSONKeyValueView: View {
                         onHighlightElement: onHighlightElement,
                         onFindInSource: onFindInSource,
                         onFilterForNode: onFilterForNode,
+                        onFilterForNodeAllReferences: onFilterForNodeAllReferences,
                         highlightPath: highlightPath,
                         currentPath: currentPath,
                         searchQuery: searchQuery
@@ -561,6 +575,7 @@ struct JSONKeyValueView: View {
                         onHighlightElement: onHighlightElement,
                         onFindInSource: onFindInSource,
                         onFilterForNode: onFilterForNode,
+                        onFilterForNodeAllReferences: onFilterForNodeAllReferences,
                         highlightPath: highlightPath,
                         currentPath: currentPath + ["\(index)"],
                         searchQuery: searchQuery
@@ -783,6 +798,7 @@ struct ArrayChunkView: View {
     let onHighlightElement: ((Int) -> Void)?
     let onFindInSource: ((Int) -> Void)?
     let onFilterForNode: ((Int) -> Void)?
+    let onFilterForNodeAllReferences: ((Int) -> Void)?
     let highlightPath: [String]?
     let currentPath: [String]
     let searchQuery: String?
@@ -854,6 +870,7 @@ struct ArrayChunkView: View {
                         onHighlightElement: onHighlightElement,
                         onFindInSource: onFindInSource,
                         onFilterForNode: onFilterForNode,
+                        onFilterForNodeAllReferences: onFilterForNodeAllReferences,
                         highlightPath: highlightPath,
                         currentPath: currentPath + ["\(absoluteIndex)"],
                         searchQuery: searchQuery
@@ -874,6 +891,6 @@ struct ArrayChunkView: View {
         "metadata": ["browser": "Chrome", "version": "98.0"],
         "active": true,
         "largeArray": largeArray
-    ], onHighlightElement: nil, onFindInSource: nil, onFilterForNode: nil, highlightPath: nil, searchQuery: nil)
+    ], onHighlightElement: nil, onFindInSource: nil, onFilterForNode: nil, onFilterForNodeAllReferences: nil, highlightPath: nil, searchQuery: nil)
     .frame(width: 400, height: 300)
 }

@@ -192,7 +192,7 @@ struct SegmentListView: View {
                     .frame(height: 44)
                     .padding(.horizontal, 16)
                     
-                    JSONInspectorView(data: selectedEvent.data, onHighlightElement: nil, onFindInSource: nil, onFilterForNode: nil, highlightPath: nil, searchQuery: nil)
+                    JSONInspectorView(data: selectedEvent.data, onHighlightElement: nil, onFindInSource: nil, onFilterForNode: nil, onFilterForNodeAllReferences: nil, highlightPath: nil, searchQuery: nil)
                         .id(selectedEvent.id)
                         .padding(.horizontal, 16)
                 } else {
