@@ -104,7 +104,10 @@ struct ContentView: View {
     @State private var selectedEvent: ReplayEvent?
     @State private var useSortedOrder = true
     @State private var timestampFilterOperator: String = ">"
+    @State private var timestampFilterText: String = ""
     @State private var timestampFilterValue: String = ""
+    @State private var nodeIdFilterText: String = ""
+    @State private var nodeIdFilter: Int? = nil
     @State private var highlightedNodeId: Int? = nil
     @State private var showHighlightError: Bool = false
     @State private var highlightErrorMessage: String = ""
@@ -182,8 +185,10 @@ struct ContentView: View {
         let allIncrementalSourcesEnabled = enabledIncrementalSources.count == incrementalSourceTypes.count
         // Check if timestamp filter is active
         let hasTimestampFilter = !timestampFilterValue.isEmpty
+        // Check if node ID filter is active
+        let hasNodeIdFilter = nodeIdFilter != nil
 
-        return !allTypesEnabled || !allIncrementalSourcesEnabled || hasTimestampFilter
+        return !allTypesEnabled || !allIncrementalSourcesEnabled || hasTimestampFilter || hasNodeIdFilter
     }
 
     private var totalSegmentsDuration: String? {
@@ -218,7 +223,70 @@ struct ContentView: View {
     }
     
     private var currentFilterCacheKey: String {
-        "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(timestampFilterOperator)-\(timestampFilterValue)"
+        "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(timestampFilterOperator)-\(timestampFilterValue)-\(nodeIdFilter?.description ?? "")"
+    }
+
+    private func eventReferencesNode(_ event: ReplayEvent, nodeId: Int) -> Bool {
+        // Recursively search through the event data for any occurrence of the node ID
+        func searchForNodeId(in data: Any) -> Bool {
+            if let dict = data as? [String: Any] {
+                // Check if this object has an "id" field matching our target
+                if let id = dict["id"] as? Int, id == nodeId {
+                    return true
+                }
+
+                // Recursively search all values
+                for (_, value) in dict {
+                    if searchForNodeId(in: value) {
+                        return true
+                    }
+                }
+            } else if let array = data as? [Any] {
+                // Search through array elements
+                for item in array {
+                    if searchForNodeId(in: item) {
+                        return true
+                    }
+                }
+            } else if let num = data as? Int, num == nodeId {
+                // Direct number match
+                return true
+            }
+
+            return false
+        }
+
+        return searchForNodeId(in: event.data)
+    }
+
+    private func findNodeIdPath(nodeId: Int, in data: Any, currentPath: [String] = []) -> [String]? {
+        if let dict = data as? [String: Any] {
+            // Check if this object contains an "id" field matching our target
+            if let id = dict["id"] as? Int, id == nodeId {
+                // Return the path to this parent object, not the id field
+                return currentPath
+            }
+
+            // Recursively search all values
+            for (key, value) in dict {
+                let newPath = currentPath + [key]
+
+                // Recursively search in nested structures
+                if let foundPath = findNodeIdPath(nodeId: nodeId, in: value, currentPath: newPath) {
+                    return foundPath
+                }
+            }
+        } else if let array = data as? [Any] {
+            for (index, item) in array.enumerated() {
+                let newPath = currentPath + ["\(index)"]
+
+                if let foundPath = findNodeIdPath(nodeId: nodeId, in: item, currentPath: newPath) {
+                    return foundPath
+                }
+            }
+        }
+
+        return nil
     }
 
     private var filteredSegments: [ReplaySegment] {
@@ -231,8 +299,9 @@ struct ContentView: View {
         let hasEventTypeFilters = enabledEventTypes.count < allEventTypes.count
         let hasIncrementalSourceFilters = enabledIncrementalSources.count < incrementalSourceTypes.count
         let hasTimestampFilter = parsedTimestampFilter != nil
+        let hasNodeIdFilter = nodeIdFilter != nil
 
-        if !hasEventTypeFilters && !hasIncrementalSourceFilters && !hasTimestampFilter {
+        if !hasEventTypeFilters && !hasIncrementalSourceFilters && !hasTimestampFilter && !hasNodeIdFilter {
             return segments
         }
 
@@ -269,6 +338,13 @@ struct ContentView: View {
                         if eventTimestamp >= timestampFilter {
                             return false
                         }
+                    }
+                }
+
+                // Apply node ID filter
+                if let nodeId = nodeIdFilter {
+                    if !eventReferencesNode(event, nodeId: nodeId) {
+                        return false
                     }
                 }
 
@@ -425,6 +501,11 @@ struct ContentView: View {
             updateSelectedSegmentAfterFilter()
         }
         .onChange(of: timestampFilterOperator) {
+            updateFilterCache()
+            updateDisplayedSegmentCache()
+            updateSelectedSegmentAfterFilter()
+        }
+        .onChange(of: nodeIdFilter) {
             updateFilterCache()
             updateDisplayedSegmentCache()
             updateSelectedSegmentAfterFilter()
@@ -652,8 +733,17 @@ struct ContentView: View {
                             data: selectedEvent.data,
                             onHighlightElement: highlightElement,
                             onFindInSource: findInSource,
-                            highlightPath: currentSearchMatch?.matchType == .eventData ? currentSearchMatch?.jsonPath : nil,
-                            searchQuery: currentSearchMatch?.matchType == .eventData ? globalSearchQuery : nil
+                            onFilterForNode: filterForNode,
+                            highlightPath: {
+                                // Priority: search match > node filter
+                                if let searchMatch = currentSearchMatch, searchMatch.matchType == .eventData {
+                                    return searchMatch.jsonPath
+                                } else if let nodeId = nodeIdFilter {
+                                    return findNodeIdPath(nodeId: nodeId, in: selectedEvent.data)
+                                }
+                                return nil
+                            }(),
+                            searchQuery: currentSearchMatch?.matchType == .eventData ? globalSearchQuery : (nodeIdFilter != nil ? "\(nodeIdFilter!)" : nil)
                         )
                         .id(selectedEvent.id)
                     }
@@ -786,10 +876,51 @@ struct ContentView: View {
                 Toggle("Use Sorted Order", isOn: $useSortedOrder)
             }
 
-            // 2. Time Filter
+            // 2. Node ID Filter
+            Section("Node Filter") {
+                HStack {
+                    ZStack(alignment: .trailing) {
+                        TextField("Node ID", text: $nodeIdFilterText)
+                            .textFieldStyle(.roundedBorder)
+                            .padding(.trailing, !nodeIdFilterText.isEmpty ? 24 : 0)
+                            .onSubmit {
+                                // Only update filter when user presses Enter
+                                if nodeIdFilterText.isEmpty {
+                                    nodeIdFilter = nil
+                                } else if let intValue = Int(nodeIdFilterText) {
+                                    nodeIdFilter = intValue
+                                }
+                            }
+
+                        if !nodeIdFilterText.isEmpty {
+                            Button(action: {
+                                nodeIdFilterText = ""
+                                nodeIdFilter = nil
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                                    .imageScale(.small)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .onChange(of: nodeIdFilter) { oldValue, newValue in
+                    // Sync text field when filter changes externally (e.g., from context menu)
+                    if let newValue = newValue {
+                        nodeIdFilterText = String(newValue)
+                    } else if nodeIdFilterText.isEmpty == false {
+                        // Only clear text if it's not already empty
+                        nodeIdFilterText = ""
+                    }
+                }
+            }
+
+            // 3. Time Filter
             Section("Time Filter") {
                 HStack {
-                    Text("Timestamp")
+                    Text("Direction")
+                    Spacer()
                     Picker("Operator", selection: $timestampFilterOperator) {
                         Text("After").tag(">")
                         Text("Before").tag("<")
@@ -797,18 +928,36 @@ struct ContentView: View {
                     .labelsHidden()
                 }
 
-                TextField("Unix timestamp", text: $timestampFilterValue)
-                    .textFieldStyle(.roundedBorder)
+                ZStack(alignment: .trailing) {
+                    TextField("Timestamp", text: $timestampFilterText)
+                        .textFieldStyle(.roundedBorder)
+                        .padding(.trailing, !timestampFilterText.isEmpty ? 24 : 0)
+                        .onSubmit {
+                            // Only update filter when user presses Enter
+                            timestampFilterValue = timestampFilterText
+                        }
+                        .onChange(of: timestampFilterValue) { oldValue, newValue in
+                            // Sync text field when filter changes externally
+                            if timestampFilterText != newValue {
+                                timestampFilterText = newValue
+                            }
+                        }
 
-                if !timestampFilterValue.isEmpty {
-                    Button("Clear", action: {
-                        timestampFilterValue = ""
-                    })
-                    .buttonStyle(.borderless)
+                    if !timestampFilterText.isEmpty {
+                        Button(action: {
+                            timestampFilterText = ""
+                            timestampFilterValue = ""
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                                .imageScale(.small)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
 
-            // 3. Event Filters
+            // 4. Event Filters
             Section("Event Type Filters") {
                 ForEach(allEventTypes, id: \.self) { eventType in
                     Toggle(eventType, isOn: Binding(
@@ -851,7 +1000,10 @@ struct ContentView: View {
     private func clearAllFilters() {
         enabledEventTypes = Set(allEventTypes)
         enabledIncrementalSources = Set(incrementalSourceTypes.map { $0.id })
+        timestampFilterText = ""
         timestampFilterValue = ""
+        nodeIdFilterText = ""
+        nodeIdFilter = nil
     }
 
     private func highlightElement(nodeId: Int) {
@@ -864,6 +1016,11 @@ struct ContentView: View {
         showHTMLSource = true
         // Search for the node ID in HTML
         htmlSourceSearchQuery = "data-rr-id=\"\(nodeId)\""
+    }
+
+    private func filterForNode(nodeId: Int) {
+        nodeIdFilter = nodeId
+        showInspector = true
     }
 
     private func showHighlightErrorAlert(message: String) {
@@ -1610,8 +1767,17 @@ struct ContentView: View {
                             data: selectedEvent.data,
                             onHighlightElement: highlightElement,
                             onFindInSource: findInSource,
-                            highlightPath: currentSearchMatch?.matchType == .eventData ? currentSearchMatch?.jsonPath : nil,
-                            searchQuery: currentSearchMatch?.matchType == .eventData ? globalSearchQuery : nil
+                            onFilterForNode: filterForNode,
+                            highlightPath: {
+                                // Priority: search match > node filter
+                                if let searchMatch = currentSearchMatch, searchMatch.matchType == .eventData {
+                                    return searchMatch.jsonPath
+                                } else if let nodeId = nodeIdFilter {
+                                    return findNodeIdPath(nodeId: nodeId, in: selectedEvent.data)
+                                }
+                                return nil
+                            }(),
+                            searchQuery: currentSearchMatch?.matchType == .eventData ? globalSearchQuery : (nodeIdFilter != nil ? "\(nodeIdFilter!)" : nil)
                         )
                         .id(selectedEvent.id)
                                     .padding(.horizontal, 16)
