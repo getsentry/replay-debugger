@@ -113,6 +113,7 @@ struct ContentView: View {
     @State private var searchMatches: [SearchMatch] = []
     @State private var currentSearchIndex: Int = 0
     @FocusState private var searchFieldFocused: Bool
+    @State private var shouldScrollToSelection: Bool = false
 
     // Performance: Cache for allEvents (always chronologically sorted for HTML renderer)
     @State private var cachedAllEvents: [ReplayEvent] = []
@@ -463,8 +464,11 @@ struct ContentView: View {
             .onChange(of: selectedSegment) {
                 if let segment = selectedSegment {
                     selectedEvent = segment.events(useSortedOrder: useSortedOrder).first
-                    withAnimation {
-                        proxy.scrollTo(segment.id, anchor: .center)
+                    // Only scroll if this selection is from search
+                    if shouldScrollToSelection {
+                        withAnimation {
+                            proxy.scrollTo(segment.id, anchor: .center)
+                        }
                     }
                 }
             }
@@ -533,8 +537,13 @@ struct ContentView: View {
             .environment(\.controlActiveState, .key)
             .onChange(of: selectedEvent) {
                 if let event = selectedEvent {
-                    withAnimation {
-                        proxy.scrollTo(event.id, anchor: .center)
+                    // Only scroll if this selection is from search
+                    if shouldScrollToSelection {
+                        withAnimation {
+                            proxy.scrollTo(event.id, anchor: .center)
+                        }
+                        // Reset flag after scrolling
+                        shouldScrollToSelection = false
                     }
                 }
             }
@@ -915,6 +924,7 @@ struct ContentView: View {
 
         // Find and select the segment
         if let segment = segments.first(where: { $0.id == match.segmentId }) {
+            shouldScrollToSelection = true
             selectedSegment = segment
 
             // Find and select the event
