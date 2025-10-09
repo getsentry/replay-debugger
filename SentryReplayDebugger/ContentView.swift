@@ -351,11 +351,36 @@ struct ContentView: View {
         .onAppear {
             loadDebugJSON()
             NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                // Check if a text field has focus (to avoid interfering with text input)
+                if let firstResponder = NSApp.keyWindow?.firstResponder as? NSTextView {
+                    return event
+                }
+
+                // Cmd+F for search
                 if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "f" {
                     showGlobalSearch = true
                     searchFieldFocused = true
                     return nil
                 }
+
+                // Arrow key navigation (only if no text field is focused)
+                switch event.keyCode {
+                case 126: // Up arrow
+                    selectPreviousEvent()
+                    return nil
+                case 125: // Down arrow
+                    selectNextEvent()
+                    return nil
+                case 123: // Left arrow
+                    selectPreviousSegment()
+                    return nil
+                case 124: // Right arrow
+                    selectNextSegment()
+                    return nil
+                default:
+                    break
+                }
+
                 return event
             }
         }
@@ -955,6 +980,54 @@ struct ContentView: View {
             if let event = events.first(where: { $0.id == match.eventId }) {
                 selectedEvent = event
             }
+        }
+    }
+
+    private func selectNextEvent() {
+        guard let currentEvent = selectedEvent,
+              let segment = displayedSegment else { return }
+
+        let events = segment.events(useSortedOrder: useSortedOrder)
+        if let currentIndex = events.firstIndex(where: { $0.id == currentEvent.id }),
+           currentIndex + 1 < events.count {
+            selectedEvent = events[currentIndex + 1]
+        }
+    }
+
+    private func selectPreviousEvent() {
+        guard let currentEvent = selectedEvent,
+              let segment = displayedSegment else { return }
+
+        let events = segment.events(useSortedOrder: useSortedOrder)
+        if let currentIndex = events.firstIndex(where: { $0.id == currentEvent.id }),
+           currentIndex > 0 {
+            selectedEvent = events[currentIndex - 1]
+        }
+    }
+
+    private func selectNextSegment() {
+        guard let currentSegment = selectedSegment else {
+            // If no segment selected, select first
+            selectedSegment = filteredSegments.first
+            return
+        }
+
+        if let currentIndex = filteredSegments.firstIndex(where: { $0.id == currentSegment.id }),
+           currentIndex + 1 < filteredSegments.count {
+            selectedSegment = filteredSegments[currentIndex + 1]
+        }
+    }
+
+    private func selectPreviousSegment() {
+        guard let currentSegment = selectedSegment else {
+            // If no segment selected, select last
+            selectedSegment = filteredSegments.last
+            return
+        }
+
+        if let currentIndex = filteredSegments.firstIndex(where: { $0.id == currentSegment.id }),
+           currentIndex > 0 {
+            selectedSegment = filteredSegments[currentIndex - 1]
         }
     }
 
