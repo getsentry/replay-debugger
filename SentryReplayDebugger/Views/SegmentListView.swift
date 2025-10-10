@@ -525,30 +525,26 @@ struct EventRowView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Text(ContentView.displayName(for: event))
                             .font(.system(.body, design: .monospaced))
                             .fontWeight(.medium)
 
-                        // Show warning indicator for high mutation counts
+                        // Show mutation count badge
                         if let mutationCount = extractMutationCount(from: event) {
-                            Group {
-                                let formatter = NumberFormatter()
-                                let _ = { formatter.numberStyle = .decimal }()
-                                let formattedCount = formatter.string(from: NSNumber(value: mutationCount)) ?? "\(mutationCount)"
+                            let formatter = NumberFormatter()
+                            let _ = { formatter.numberStyle = .decimal }()
+                            let formattedCount = formatter.string(from: NSNumber(value: mutationCount)) ?? "\(mutationCount)"
 
-                                if mutationCount > 5000 {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.caption)
-                                        .foregroundColor(.red)
-                                        .help("Severe: \(formattedCount) mutations")
-                                } else if mutationCount > 1000 {
-                                    Image(systemName: "exclamationmark.triangle")
-                                        .font(.caption)
-                                        .foregroundColor(.orange)
-                                        .help("Warning: \(formattedCount) mutations")
-                                }
-                            }
+                            Text(formattedCount)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(mutationCount > 5000 ? Color.red : (mutationCount > 1000 ? Color.orange : Color.secondary))
+                                )
                         }
                     }
 
