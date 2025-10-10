@@ -128,6 +128,10 @@ struct ContentView: View {
     @State private var shouldScrollToSelection: Bool = false
     @State private var currentSearchMatch: SearchMatch? = nil
 
+    // Event type counts (computed when filter inspector is shown)
+    @State private var eventTypeCounts: [String: Int] = [:]
+    @State private var incrementalSourceCounts: [Int: Int] = [:]
+
     // Performance: Cache for allEvents (always chronologically sorted for HTML renderer)
     @State private var cachedAllEvents: [ReplayEvent] = []
     @State private var cachedAllEventsSegmentCount: Int = 0
@@ -992,7 +996,7 @@ struct ContentView: View {
             // 4. Event Filters
             Section("Event Type Filters") {
                 ForEach(allEventTypes, id: \.self) { eventType in
-                    Toggle(eventType, isOn: Binding(
+                    Toggle(isOn: Binding(
                         get: { enabledEventTypes.contains(eventType) },
                         set: { isEnabled in
                             if isEnabled {
@@ -1001,7 +1005,22 @@ struct ContentView: View {
                                 enabledEventTypes.remove(eventType)
                             }
                         }
-                    ))
+                    )) {
+                        HStack {
+                            Text(eventType)
+                            Spacer()
+                            let count = eventTypeCounts[eventType] ?? 0
+                            Text("\(count)")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(count > 0 ? .white : .secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule()
+                                        .fill(count > 0 ? Color.secondary : Color.secondary.opacity(0.2))
+                                )
+                        }
+                    }
                 }
             }
 
@@ -1009,7 +1028,7 @@ struct ContentView: View {
             if enabledEventTypes.contains("IncrementalSnapshot") {
                 Section("IncrementalSnapshot Sources") {
                     ForEach(incrementalSourceTypes, id: \.id) { source in
-                        Toggle(source.name, isOn: Binding(
+                        Toggle(isOn: Binding(
                             get: { enabledIncrementalSources.contains(source.id) },
                             set: { isEnabled in
                                 if isEnabled {
@@ -1018,7 +1037,22 @@ struct ContentView: View {
                                     enabledIncrementalSources.remove(source.id)
                                 }
                             }
-                        ))
+                        )) {
+                            HStack {
+                                Text(source.name)
+                                Spacer()
+                                let count = incrementalSourceCounts[source.id] ?? 0
+                                Text("\(count)")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(count > 0 ? .white : .secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        Capsule()
+                                            .fill(count > 0 ? Color.secondary : Color.secondary.opacity(0.2))
+                                    )
+                            }
+                        }
                     }
                 }
             }
@@ -1027,6 +1061,9 @@ struct ContentView: View {
         }
         //.padding(.top, -20)
         .navigationTitle("Filters")
+        .onAppear {
+            computeEventCounts()
+        }
     }
 
     private func clearAllFilters() {
@@ -1036,6 +1073,27 @@ struct ContentView: View {
         timestampFilterValue = ""
         nodeIdFilterText = ""
         nodeIdFilter = nil
+    }
+
+    private func computeEventCounts() {
+        var typeCounts: [String: Int] = [:]
+        var sourceCounts: [Int: Int] = [:]
+
+        for segment in segments {
+            for event in segment.sortedEvents {
+                // Count by base event type
+                let baseType = ContentView.baseTypeName(for: event.type)
+                typeCounts[baseType, default: 0] += 1
+
+                // Count by incremental source if it's an IncrementalSnapshot
+                if event.type == 3, let source = event.data["source"] as? Int {
+                    sourceCounts[source, default: 0] += 1
+                }
+            }
+        }
+
+        eventTypeCounts = typeCounts
+        incrementalSourceCounts = sourceCounts
     }
 
     private func highlightElement(nodeId: Int) {
