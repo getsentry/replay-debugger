@@ -455,7 +455,7 @@ struct ContentView: View {
         }
         .inspector(isPresented: $showInspector) {
             inspectorContent
-                .inspectorColumnWidth(min: 250, ideal: 350, max: 500)
+                .inspectorColumnWidth(min: 290, ideal: 390, max: 520)
         }
         .alert("Element Not Found", isPresented: $showHighlightError) {
             Button("OK") { }
@@ -1108,7 +1108,6 @@ struct ContentView: View {
         }
         .formStyle(.grouped)
         }
-        //.padding(.top, -20)
         .navigationTitle("Filters")
         .onAppear {
             computeEventCounts()
@@ -1233,7 +1232,7 @@ struct ContentView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(isError ? Color.red.opacity(0.1) : Color.blue.opacity(0.1))
+        .background(isError ? Color.red.opacity(0.9) : Color.blue.opacity(0.9))
     }
 
     private func timeFromStart(for event: ReplayEvent) -> String? {
