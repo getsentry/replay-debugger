@@ -100,6 +100,7 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var enabledEventTypes: Set<String> = ["DomContentLoaded", "Load", "FullSnapshot", "IncrementalSnapshot", "Meta", "Custom", "Plugin"]
     @State private var enabledIncrementalSources: Set<Int> = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    @State private var enabledCustomTags: Set<String> = []
     @State private var selectedSegment: ReplaySegment?
     @State private var selectedEvent: ReplayEvent?
     @State private var useSortedOrder = true
@@ -131,6 +132,8 @@ struct ContentView: View {
     // Event type counts (computed when filter inspector is shown)
     @State private var eventTypeCounts: [String: Int] = [:]
     @State private var incrementalSourceCounts: [Int: Int] = [:]
+    @State private var customTagCounts: [String: Int] = [:]
+    @State private var allCustomTags: [String] = []
 
     // Performance: Cache for allEvents (always chronologically sorted for HTML renderer)
     @State private var cachedAllEvents: [ReplayEvent] = []
@@ -188,12 +191,14 @@ struct ContentView: View {
         let allTypesEnabled = enabledEventTypes.count == allEventTypes.count
         // Check if any incremental sources are disabled
         let allIncrementalSourcesEnabled = enabledIncrementalSources.count == incrementalSourceTypes.count
+        // Check if any custom tags are disabled
+        let allCustomTagsEnabled = allCustomTags.isEmpty || enabledCustomTags.count == allCustomTags.count
         // Check if timestamp filter is active
         let hasTimestampFilter = !timestampFilterValue.isEmpty
         // Check if node ID filter is active
         let hasNodeIdFilter = nodeIdFilter != nil
 
-        return !allTypesEnabled || !allIncrementalSourcesEnabled || hasTimestampFilter || hasNodeIdFilter
+        return !allTypesEnabled || !allIncrementalSourcesEnabled || !allCustomTagsEnabled || hasTimestampFilter || hasNodeIdFilter
     }
 
     private var totalSegmentsDuration: String? {
@@ -228,7 +233,7 @@ struct ContentView: View {
     }
     
     private var currentFilterCacheKey: String {
-        "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(timestampFilterOperator)-\(timestampFilterValue)-\(nodeIdFilter?.description ?? "")-\(nodeIdFilterAllReferences)"
+        "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(enabledCustomTags.sorted().joined())-\(timestampFilterOperator)-\(timestampFilterValue)-\(nodeIdFilter?.description ?? "")-\(nodeIdFilterAllReferences)"
     }
 
     private func eventReferencesNode(_ event: ReplayEvent, nodeId: Int, allReferences: Bool) -> Bool {
@@ -316,10 +321,11 @@ struct ContentView: View {
         // Early return if no filters are active
         let hasEventTypeFilters = enabledEventTypes.count < allEventTypes.count
         let hasIncrementalSourceFilters = enabledIncrementalSources.count < incrementalSourceTypes.count
+        let hasCustomTagFilters = !allCustomTags.isEmpty && enabledCustomTags.count < allCustomTags.count
         let hasTimestampFilter = parsedTimestampFilter != nil
         let hasNodeIdFilter = nodeIdFilter != nil
 
-        if !hasEventTypeFilters && !hasIncrementalSourceFilters && !hasTimestampFilter && !hasNodeIdFilter {
+        if !hasEventTypeFilters && !hasIncrementalSourceFilters && !hasCustomTagFilters && !hasTimestampFilter && !hasNodeIdFilter {
             return segments
         }
 
@@ -340,6 +346,16 @@ struct ContentView: View {
                 if hasIncrementalSourceFilters && event.type == 3 {
                     if let source = event.data["source"] as? Int {
                         if !enabledIncrementalSources.contains(source) {
+                            return false
+                        }
+                    }
+                }
+
+                // Apply Custom tag filter if this is a Custom event
+                // Only check if some tags are disabled
+                if !allCustomTags.isEmpty && allCustomTags.count != enabledCustomTags.count && event.type == 5 {
+                    if let customType = extractCustomEventType(from: event.data) {
+                        if !enabledCustomTags.contains(customType) {
                             return false
                         }
                     }
@@ -1056,6 +1072,39 @@ struct ContentView: View {
                     }
                 }
             }
+
+            // Custom event tag filters (only shown when Custom is enabled)
+            if enabledEventTypes.contains("Custom") && !allCustomTags.isEmpty {
+                Section("Custom Event Tags") {
+                    ForEach(allCustomTags, id: \.self) { tag in
+                        Toggle(isOn: Binding(
+                            get: { enabledCustomTags.contains(tag) },
+                            set: { isEnabled in
+                                if isEnabled {
+                                    enabledCustomTags.insert(tag)
+                                } else {
+                                    enabledCustomTags.remove(tag)
+                                }
+                            }
+                        )) {
+                            HStack {
+                                Text(tag)
+                                Spacer()
+                                let count = customTagCounts[tag] ?? 0
+                                Text("\(count)")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(count > 0 ? .white : .secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        Capsule()
+                                            .fill(count > 0 ? Color.secondary : Color.secondary.opacity(0.2))
+                                    )
+                            }
+                        }
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         }
@@ -1069,6 +1118,7 @@ struct ContentView: View {
     private func clearAllFilters() {
         enabledEventTypes = Set(allEventTypes)
         enabledIncrementalSources = Set(incrementalSourceTypes.map { $0.id })
+        enabledCustomTags = Set(allCustomTags)
         timestampFilterText = ""
         timestampFilterValue = ""
         nodeIdFilterText = ""
@@ -1078,6 +1128,8 @@ struct ContentView: View {
     private func computeEventCounts() {
         var typeCounts: [String: Int] = [:]
         var sourceCounts: [Int: Int] = [:]
+        var tagCounts: [String: Int] = [:]
+        var tags: Set<String> = []
 
         for segment in segments {
             for event in segment.sortedEvents {
@@ -1089,11 +1141,49 @@ struct ContentView: View {
                 if event.type == 3, let source = event.data["source"] as? Int {
                     sourceCounts[source, default: 0] += 1
                 }
+
+                // Count by custom event type if it's a Custom event
+                if event.type == 5 {
+                    if let customType = extractCustomEventType(from: event.data) {
+                        tagCounts[customType, default: 0] += 1
+                        tags.insert(customType)
+                    }
+                }
             }
         }
 
         eventTypeCounts = typeCounts
         incrementalSourceCounts = sourceCounts
+        customTagCounts = tagCounts
+        allCustomTags = Array(tags).sorted()
+
+        // Initialize enabled custom tags with all tags if empty
+        if enabledCustomTags.isEmpty {
+            enabledCustomTags = tags
+        }
+    }
+
+    private func extractCustomEventType(from eventData: [String: Any]) -> String? {
+        guard let tag = eventData["tag"] as? String else {
+            return nil
+        }
+
+        switch tag {
+        case "performanceSpan":
+            if let payload = eventData["payload"] as? [String: Any],
+               let op = payload["op"] as? String {
+                return op
+            }
+        case "breadcrumb":
+            if let payload = eventData["payload"] as? [String: Any],
+               let category = payload["category"] as? String {
+                return category
+            }
+        default:
+            return tag
+        }
+
+        return tag
     }
 
     private func highlightElement(nodeId: Int) {
