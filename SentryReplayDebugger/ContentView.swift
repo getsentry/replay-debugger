@@ -675,37 +675,52 @@ struct ContentView: View {
         let eventsArray = Array(events.enumerated())
 
         return ScrollViewReader { proxy in
-            List(selection: $selectedEvent) {
-                ForEach(eventsArray, id: \.element.id) { index, event in
-                    let previousEvent: ReplayEvent? = index > 0 ? events[index - 1] : nil
-                    EventRowView(
-                        event: event,
-                        isSelected: selectedEvent?.id == event.id,
-                        previousEvent: previousEvent,
-                        onTimestampClick: { timestamp in
-                            setTimestampFilter(timestamp)
+            Group {
+                if events.isEmpty && hasActiveFilters {
+                    ContentUnavailableView {
+                        Label("No Events", systemImage: "tray")
+                    } description: {
+                        Text("No events match the current filters")
+                    } actions: {
+                        Button("Clear All Filters") {
+                            clearAllFilters()
                         }
-                    )
-                    .tag(event)
-                    .id(event.id)
-                }
-            }
-            .listStyle(.plain)
-            .environment(\.controlActiveState, .key)
-            .onChange(of: selectedEvent) {
-                if let event = selectedEvent {
-                    // Only scroll if this selection is from search
-                    if shouldScrollToSelection {
-                        withAnimation {
-                            proxy.scrollTo(event.id, anchor: .center)
-                        }
-                        // Reset flag after scrolling
-                        shouldScrollToSelection = false
+                        .buttonStyle(.borderedProminent)
                     }
+                } else {
+                    List(selection: $selectedEvent) {
+                        ForEach(eventsArray, id: \.element.id) { index, event in
+                            let previousEvent: ReplayEvent? = index > 0 ? events[index - 1] : nil
+                            EventRowView(
+                                event: event,
+                                isSelected: selectedEvent?.id == event.id,
+                                previousEvent: previousEvent,
+                                onTimestampClick: { timestamp in
+                                    setTimestampFilter(timestamp)
+                                }
+                            )
+                            .tag(event)
+                            .id(event.id)
+                        }
+                    }
+                    .listStyle(.plain)
+                    .environment(\.controlActiveState, .key)
+                    .onChange(of: selectedEvent) {
+                        if let event = selectedEvent {
+                            // Only scroll if this selection is from search
+                            if shouldScrollToSelection {
+                                withAnimation {
+                                    proxy.scrollTo(event.id, anchor: .center)
+                                }
+                                // Reset flag after scrolling
+                                shouldScrollToSelection = false
+                            }
+                        }
+                    }
+                    .navigationTitle("Events")
+                    .navigationSubtitle("\(events.count) events")
                 }
             }
-            .navigationTitle("Events")
-            .navigationSubtitle("\(events.count) events")
         }
     }
 
@@ -1581,14 +1596,7 @@ struct ContentView: View {
         // Map to rrweb IncrementalSource enum
         switch sourceNumber {
         case 0:
-            // For Mutation events, calculate total mutation count
-            let mutationCount = calculateMutationCount(eventData: eventData)
-            if mutationCount > 0 {
-                let formatter = NumberFormatter()
-                formatter.numberStyle = .decimal
-                let formattedCount = formatter.string(from: NSNumber(value: mutationCount)) ?? "\(mutationCount)"
-                return "Mutation (\(formattedCount))"
-            }
+            // For Mutation events, don't include count in name (shown as badge)
             return "Mutation"
         case 1: return "MouseMove"
         case 2: return "MouseInteraction"
