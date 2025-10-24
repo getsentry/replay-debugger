@@ -50,7 +50,7 @@ final class SegmentListViewUITests: XCTestCase {
             segmentRow.tap()
 
             // Then: Events list should become visible
-            let eventsList = app.lists["events-list"]
+            let eventsList = app.scrollViews["events-list"]
             XCTAssertTrue(eventsList.exists, "Events list should exist after selecting a segment")
         } else {
             // Skip test if no data is loaded
@@ -127,7 +127,7 @@ final class SegmentListViewUITests: XCTestCase {
             sleep(1)
 
             // Then: Events should be visible
-            let eventsList = app.lists["events-list"]
+            let eventsList = app.scrollViews["events-list"]
             XCTAssertTrue(eventsList.exists, "Events list should exist after selecting first segment")
 
             // When: Selecting second segment
@@ -189,7 +189,7 @@ final class SegmentListViewUITests: XCTestCase {
 
         // These may or may not exist depending on app state
         // This is a structure test
-        if !app.lists["events-list"].exists {
+        if !app.scrollViews["events-list"].exists {
             // If events list doesn't exist, we might be in empty state
             // But this depends on app behavior
         }

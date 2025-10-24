@@ -277,7 +277,7 @@ final class HTMLRendererViewUITests: XCTestCase {
         sleep(1)
 
         // Select event
-        let eventsList = app.lists["events-list"]
+        let eventsList = app.scrollViews["events-list"]
         XCTAssertTrue(eventsList.exists, "Events list should exist")
 
         let firstEvent = app.otherElements["event-row-event-1"]
