@@ -427,9 +427,8 @@ struct ContentView: View {
                 Button(action: { loadFromClipboard() }) {
                     Label("Load JSON", systemImage: "doc.on.clipboard")
                 }
-                .keyboardShortcut("v", modifiers: [.command, .shift])
                 .disabled(isLoading)
-                .help("Load replay data from clipboard (⇧⌘V)")
+                .help("Load replay data from clipboard (⌘V)")
 
                 Button(action: { showInspector.toggle() }) {
                     Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
@@ -479,6 +478,12 @@ struct ContentView: View {
                 if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "f" {
                     showGlobalSearch = true
                     searchFieldFocused = true
+                    return nil
+                }
+
+                // Cmd+V for loading from clipboard
+                if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "v" {
+                    loadFromClipboard()
                     return nil
                 }
 
