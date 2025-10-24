@@ -179,7 +179,7 @@ class DOMDocumentTypeNode: DOMNode {
 
 /// Element node (type 2)
 class DOMElementNode: DOMContainerNode {
-    let tagName: String
+    var tagName: String
     var attributes: [String: String]
     let isSVG: Bool
 

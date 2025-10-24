@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "F9045184-3D9A-4F2D-BD70-6CDBA139BE6C",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:SentryReplayDebugger.xcodeproj",
+      "identifier" : "A1234567890ABCDEF020",
+      "name" : "SentryReplayDebugger"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:SentryReplayDebugger.xcodeproj",
+        "identifier" : "280DC53D2EAC064F00125EB1",
+        "name" : "SentryReplayDebuggerTests"
+      }
+    }
+  ],
+  "version" : 1
+}

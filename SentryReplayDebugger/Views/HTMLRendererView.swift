@@ -318,24 +318,26 @@ struct HTMLRendererView: View {
         }
 
         // Process incrementally to each subsequent boundary
-        for boundaryNum in 2...numBoundaries {
-            let boundaryIndex = startIndex + (cacheInterval * boundaryNum)
-            let eventsAtBoundary = cacheInterval * boundaryNum
+        if numBoundaries > 1 {
+            for boundaryNum in 2...numBoundaries {
+                let boundaryIndex = startIndex + (cacheInterval * boundaryNum)
+                let eventsAtBoundary = cacheInterval * boundaryNum
 
-            // Incremental from current state
-            currentState = RRWebEventProcessor.processEventsIncremental(
-                events,
-                from: currentIndex + 1,
-                to: boundaryIndex,
-                startingState: currentState
-            )
+                // Incremental from current state
+                currentState = RRWebEventProcessor.processEventsIncremental(
+                    events,
+                    from: currentIndex + 1,
+                    to: boundaryIndex,
+                    startingState: currentState
+                )
 
-            if currentState.html != nil && renderStateCache[boundaryIndex] == nil {
-                NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(boundaryIndex) (\(eventsAtBoundary) events from FS at \(startIndex))")
-                renderStateCache[boundaryIndex] = currentState.copy()
+                if currentState.html != nil && renderStateCache[boundaryIndex] == nil {
+                    NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(boundaryIndex) (\(eventsAtBoundary) events from FS at \(startIndex))")
+                    renderStateCache[boundaryIndex] = currentState.copy()
+                }
+
+                currentIndex = boundaryIndex
             }
-
-            currentIndex = boundaryIndex
         }
 
         // Process from last checkpoint to target if needed

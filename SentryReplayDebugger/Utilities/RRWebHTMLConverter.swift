@@ -87,12 +87,19 @@ struct RRWebHTMLConverter {
     }
 
     private static func buildElementNode(from node: [String: Any], id: Int) -> DOMElementNode? {
-        guard let tagName = node["tagName"] as? String else {
+        guard var tagName = node["tagName"] as? String else {
             return nil
         }
 
         let rawAttributes = node["attributes"] as? [String: Any] ?? [:]
         let isSVG = node["isSVG"] as? Bool ?? false
+
+        // Convert <link> elements with _cssText to <style> elements
+        var cssTextFromLink: String?
+        if tagName.lowercased() == "link", let cssText = rawAttributes["_cssText"] as? String, !cssText.isEmpty {
+            tagName = "style"
+            cssTextFromLink = cssText
+        }
 
         // Process special rr_ attributes that become inline styles
         var inlineStyles: [String] = []
@@ -159,10 +166,21 @@ struct RRWebHTMLConverter {
             }
         }
 
-        // Handle _cssText for style tags
-        if tagName == "style", let cssText = rawAttributes["_cssText"] as? String {
-            let textNode = DOMTextNode(id: -1, textContent: cssText, isStyle: true)
-            elementNode.appendChild(textNode)
+        // Handle _cssText for style tags (including converted link tags)
+        if tagName == "style" {
+            var cssText: String?
+            if let linkCSS = cssTextFromLink {
+                // CSS from converted <link> element
+                cssText = linkCSS
+            } else if let styleCSS = rawAttributes["_cssText"] as? String {
+                // CSS from regular <style> element
+                cssText = styleCSS
+            }
+
+            if let cssText = cssText {
+                let textNode = DOMTextNode(id: -1, textContent: cssText, isStyle: true)
+                elementNode.appendChild(textNode)
+            }
         }
 
         return elementNode

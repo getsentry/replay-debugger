@@ -218,7 +218,13 @@ struct RRWebEventProcessor {
                             }
                             continue
                         } else if key == "_cssText" {
-                            // Handle _cssText for style elements
+                            // Handle _cssText - convert <link> to <style> if needed
+                            let tagNameLower = elementNode.tagName.lowercased()
+                            if tagNameLower == "link" {
+                                // Convert link element to style element
+                                elementNode.tagName = "style"
+                            }
+
                             if elementNode.tagName.lowercased() == "style" {
                                 // Update or add text node with CSS content
                                 if let cssText = value as? String {
