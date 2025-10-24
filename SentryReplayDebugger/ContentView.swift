@@ -514,6 +514,9 @@ struct ContentView: View {
             updateFilterCache()
             updateDisplayedSegmentCache()
 
+            // Recompute event counts when segments change
+            computeEventCounts()
+
             if !segments.isEmpty && selectedSegment == nil {
                 selectedSegment = filteredSegments.first
                 selectedEvent = displayedSegment?.events(useSortedOrder: useSortedOrder).first
