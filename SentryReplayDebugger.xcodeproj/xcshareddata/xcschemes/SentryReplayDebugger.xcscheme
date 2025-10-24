@@ -46,6 +46,17 @@
                ReferencedContainer = "container:SentryReplayDebugger.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "280DC5592EAC255200125EB1"
+               BuildableName = "SentryReplayDebuggerUITests.xctest"
+               BlueprintName = "SentryReplayDebuggerUITests"
+               ReferencedContainer = "container:SentryReplayDebugger.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

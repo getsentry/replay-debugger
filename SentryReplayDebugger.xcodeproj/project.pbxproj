@@ -33,11 +33,19 @@
 			remoteGlobalIDString = A1234567890ABCDEF020;
 			remoteInfo = SentryReplayDebugger;
 		};
+		280DC5602EAC255200125EB1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1234567890ABCDEF024 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1234567890ABCDEF020;
+			remoteInfo = SentryReplayDebugger;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		280DC53E2EAC064F00125EB1 /* SentryReplayDebuggerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SentryReplayDebuggerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		280DC5552EAC0C0900125EB1 /* SentryReplayDebugger.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = file; path = SentryReplayDebugger.xctestplan; sourceTree = "<group>"; };
+		280DC55A2EAC255200125EB1 /* SentryReplayDebuggerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SentryReplayDebuggerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		28651E402E91A7210087E7DD /* HTMLRendererView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLRendererView.swift; sourceTree = "<group>"; };
 		28651E422E91A7290087E7DD /* RRWebHTMLConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RRWebHTMLConverter.swift; sourceTree = "<group>"; };
 		28651E442E91A9BF0087E7DD /* HTMLBeautifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLBeautifier.swift; sourceTree = "<group>"; };
@@ -60,10 +68,18 @@
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		280DC53F2EAC064F00125EB1 /* SentryReplayDebuggerTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = SentryReplayDebuggerTests; sourceTree = "<group>"; };
+		280DC55B2EAC255200125EB1 /* SentryReplayDebuggerUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = SentryReplayDebuggerUITests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		280DC53B2EAC064F00125EB1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		280DC5572EAC255200125EB1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -86,6 +102,7 @@
 				280DC5552EAC0C0900125EB1 /* SentryReplayDebugger.xctestplan */,
 				A1234567890ABCDEF013 /* SentryReplayDebugger */,
 				280DC53F2EAC064F00125EB1 /* SentryReplayDebuggerTests */,
+				280DC55B2EAC255200125EB1 /* SentryReplayDebuggerUITests */,
 				A1234567890ABCDEF014 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -111,6 +128,7 @@
 			children = (
 				A1234567890ABCDEF009 /* SentryReplayDebugger.app */,
 				280DC53E2EAC064F00125EB1 /* SentryReplayDebuggerTests.xctest */,
+				280DC55A2EAC255200125EB1 /* SentryReplayDebuggerUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -189,6 +207,29 @@
 			productReference = 280DC53E2EAC064F00125EB1 /* SentryReplayDebuggerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		280DC5592EAC255200125EB1 /* SentryReplayDebuggerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 280DC5622EAC255200125EB1 /* Build configuration list for PBXNativeTarget "SentryReplayDebuggerUITests" */;
+			buildPhases = (
+				280DC5562EAC255200125EB1 /* Sources */,
+				280DC5572EAC255200125EB1 /* Frameworks */,
+				280DC5582EAC255200125EB1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				280DC5612EAC255200125EB1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				280DC55B2EAC255200125EB1 /* SentryReplayDebuggerUITests */,
+			);
+			name = SentryReplayDebuggerUITests;
+			packageProductDependencies = (
+			);
+			productName = SentryReplayDebuggerUITests;
+			productReference = 280DC55A2EAC255200125EB1 /* SentryReplayDebuggerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		A1234567890ABCDEF020 /* SentryReplayDebugger */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A1234567890ABCDEF021 /* Build configuration list for PBXNativeTarget "SentryReplayDebugger" */;
@@ -220,6 +261,10 @@
 						CreatedOnToolsVersion = 26.0.1;
 						TestTargetID = A1234567890ABCDEF020;
 					};
+					280DC5592EAC255200125EB1 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = A1234567890ABCDEF020;
+					};
 					A1234567890ABCDEF020 = {
 						CreatedOnToolsVersion = 15.0;
 					};
@@ -240,12 +285,20 @@
 			targets = (
 				A1234567890ABCDEF020 /* SentryReplayDebugger */,
 				280DC53D2EAC064F00125EB1 /* SentryReplayDebuggerTests */,
+				280DC5592EAC255200125EB1 /* SentryReplayDebuggerUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		280DC53C2EAC064F00125EB1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		280DC5582EAC255200125EB1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -265,6 +318,13 @@
 
 /* Begin PBXSourcesBuildPhase section */
 		280DC53A2EAC064F00125EB1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		280DC5562EAC255200125EB1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -299,6 +359,11 @@
 			isa = PBXTargetDependency;
 			target = A1234567890ABCDEF020 /* SentryReplayDebugger */;
 			targetProxy = 280DC5422EAC064F00125EB1 /* PBXContainerItemProxy */;
+		};
+		280DC5612EAC255200125EB1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1234567890ABCDEF020 /* SentryReplayDebugger */;
+			targetProxy = 280DC5602EAC255200125EB1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -354,6 +419,46 @@
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SentryReplayDebugger.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SentryReplayDebugger";
 				XROS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		280DC5632EAC255200125EB1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.7;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = sentry.SentryReplayDebuggerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = SentryReplayDebugger;
+			};
+			name = Debug;
+		};
+		280DC5642EAC255200125EB1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.7;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = sentry.SentryReplayDebuggerUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = SentryReplayDebugger;
 			};
 			name = Release;
 		};
@@ -550,6 +655,15 @@
 			buildConfigurations = (
 				280DC5442EAC064F00125EB1 /* Debug */,
 				280DC5452EAC064F00125EB1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		280DC5622EAC255200125EB1 /* Build configuration list for PBXNativeTarget "SentryReplayDebuggerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				280DC5632EAC255200125EB1 /* Debug */,
+				280DC5642EAC255200125EB1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
