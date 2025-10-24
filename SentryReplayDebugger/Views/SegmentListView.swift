@@ -100,10 +100,12 @@ struct SegmentListView: View {
                             .padding(.leading, 8)
                             .padding(.trailing, 8)
                             .padding(.vertical, 8)
+                            .accessibilityIdentifier("segment-row-\(segment.id)")
                         }
                     }
                     .padding(.vertical, 8)
                 }
+                .accessibilityIdentifier("segments-scroll-view")
             }
             .frame(width: segmentColumnWidth ?? 200)
             
@@ -134,6 +136,7 @@ struct SegmentListView: View {
                                 .cornerRadius(6)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityIdentifier("sort-toggle-button")
                         }
                         
                         if let eventsDuration = eventsDuration(for: selectedSegment) {
@@ -156,7 +159,9 @@ struct SegmentListView: View {
                             .onTapGesture {
                                 selectedEvent = event
                             }
+                            .accessibilityIdentifier("event-row-\(event.id)")
                     }
+                    .accessibilityIdentifier("events-list")
                 } else {
                     VStack {
                         Image(systemName: "doc.text")
@@ -195,6 +200,7 @@ struct SegmentListView: View {
                     JSONInspectorView(data: selectedEvent.data, onHighlightElement: nil, onFindInSource: nil, onFilterForNode: nil, onFilterForNodeAllReferences: nil, highlightPath: nil, searchQuery: nil)
                         .id(selectedEvent.id)
                         .padding(.horizontal, 16)
+                        .accessibilityIdentifier("event-details-json")
                 } else {
                     VStack {
                         Image(systemName: "curlybraces")

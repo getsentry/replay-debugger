@@ -29,6 +29,7 @@ struct HTMLRenderPanel: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .frame(width: 180)
+                .accessibilityIdentifier("render-mode-picker")
             }
             .frame(height: 44)
             .padding(.horizontal, 16)
@@ -99,6 +100,7 @@ struct HTMLRendererView: View {
             } else if let html = renderState.html {
                 if showSource {
                     HTMLSourceView(html: html, searchQuery: $sourceSearchQuery)
+                        .accessibilityIdentifier("html-source-view")
                 } else {
                     ScaledWebView(
                         html: html,
@@ -107,6 +109,7 @@ struct HTMLRendererView: View {
                         webView: $webView,
                         highlightFrame: highlightFrame
                     )
+                    .accessibilityIdentifier("html-rendered-view")
                 }
             }
         }
