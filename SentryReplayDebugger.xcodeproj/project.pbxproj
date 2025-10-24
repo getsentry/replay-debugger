@@ -514,10 +514,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = SentryReplayDebugger/SentryReplayDebugger.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"SentryReplayDebugger/Preview Content\"";
+				DEVELOPMENT_TEAM = 5G46K89SAC;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
@@ -529,6 +531,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				"MACOSX_DEPLOYMENT_TARGET[arch=arm64]" = 14.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sentry.SentryReplayDebugger;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -549,7 +552,7 @@
 				280DC5452EAC064F00125EB1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		A1234567890ABCDEF021 /* Build configuration list for PBXNativeTarget "SentryReplayDebugger" */ = {
 			isa = XCConfigurationList;
@@ -558,7 +561,7 @@
 				A1234567890ABCDEF029 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		A1234567890ABCDEF025 /* Build configuration list for PBXProject "SentryReplayDebugger" */ = {
 			isa = XCConfigurationList;
@@ -567,7 +570,7 @@
 				A1234567890ABCDEF027 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 	};
