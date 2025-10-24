@@ -121,3 +121,6 @@ Temporary Items
 billy.json
 segment*.json
 sentry-replay-debug.html
+
+# Configuration files with secrets
+Config.xcconfig

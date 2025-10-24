@@ -17,6 +17,28 @@ A macOS application for debugging and inspecting Sentry Session Replay data. Vie
 - Xcode 15.0 or later
 - Swift 5.9 or later
 
+## Configuration
+
+### Sentry Error Tracking
+
+The app uses Sentry for error tracking. To configure:
+
+1. Get your Sentry DSN from your Sentry project settings:
+   - Go to https://sentry.io/settings/YOUR_ORG/projects/YOUR_PROJECT/keys/
+   - Copy your DSN
+
+2. Configure the DSN in Xcode:
+   - Open the project in Xcode
+   - Go to **Product > Scheme > Edit Scheme**
+   - Select **Run** in the left sidebar
+   - Go to the **Arguments** tab
+   - Under **Environment Variables**, click the **+** button
+   - Add:
+     - Name: `SENTRY_DSN`
+     - Value: `your-actual-sentry-dsn-here`
+
+The app will run without Sentry if the DSN is not configured (it will print a warning in the console).
+
 ## Building the Project
 
 ### Option 1: Using Xcode (Recommended)

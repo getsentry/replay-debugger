@@ -1,0 +1,5 @@
+// Configuration file template
+// Copy this file to Config.xcconfig and fill in your actual values
+
+// Your Sentry DSN from https://sentry.io/settings/YOUR_ORG/projects/YOUR_PROJECT/keys/
+SENTRY_DSN = your-sentry-dsn-here
