@@ -94,6 +94,7 @@ struct SearchMatch: Identifiable {
 }
 
 struct ContentView: View {
+    @StateObject private var oauthService = SentryOAuthService.shared
     @State private var replayURL: String = ""
     @State private var segments: [ReplaySegment] = []
     @State private var isLoading = false
@@ -439,6 +440,19 @@ struct ContentView: View {
 
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 8) {
+                    // OAuth Login/Logout Button
+                    if oauthService.isAuthenticated {
+                        Button(action: { handleLogout() }) {
+                            Label("Logout", systemImage: "person.crop.circle.badge.xmark")
+                        }
+                        .help("Logout from Sentry")
+                    } else {
+                        Button(action: { handleLogin() }) {
+                            Label("Login", systemImage: "person.crop.circle.badge.checkmark")
+                        }
+                        .help("Login with Sentry OAuth")
+                    }
+
                     TextField("Enter Sentry replay URL...", text: $replayURL)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 300)
@@ -566,6 +580,19 @@ struct ContentView: View {
         .onChange(of: timestampFilterOperator) {
             updateSelectedSegmentAfterFilter()
         }
+        .onOpenURL { url in
+            handleOAuthCallback(url: url)
+        }
+    }
+
+    // MARK: - OAuth Callback Handler
+
+    private func handleOAuthCallback(url: URL) {
+        // The OAuth callback is handled automatically by ASWebAuthenticationSession
+        // This handler is here as a backup and for logging purposes
+        #if DEBUG
+        NSLog("📱 Received URL callback: \(url)")
+        #endif
     }
 
     // MARK: - View Components
@@ -1456,22 +1483,41 @@ struct ContentView: View {
         }
     }
 
+    private func handleLogin() {
+        Task {
+            do {
+                try await oauthService.login()
+                errorMessage = nil
+            } catch OAuthError.userCancelled {
+                // User cancelled, don't show error
+                errorMessage = nil
+            } catch {
+                errorMessage = "Login failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func handleLogout() {
+        oauthService.logout()
+        errorMessage = nil
+    }
+
     private func fetchReplayData() {
         guard let urlComponents = SentryURLParser.parse(url: replayURL) else {
             errorMessage = "Invalid Sentry replay URL format"
             return
         }
-        
+
         isLoading = true
         errorMessage = nil
-        
+
         Task {
             do {
                 let fetchedSegments = try await SentryAPIService.shared.fetchReplaySegments(
                     orgSlug: urlComponents.orgSlug,
                     replayId: urlComponents.replayId
                 )
-                
+
                 await MainActor.run {
                     self.segments = fetchedSegments
                     self.isLoading = false

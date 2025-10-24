@@ -15,31 +15,39 @@ class SentryAPIService: ObservableObject {
     private init() {}
     
     func fetchReplaySegments(orgSlug: String, replayId: String) async throws -> [ReplaySegment] {
+        // Check if token needs refresh before making request
+        await SentryOAuthService.shared.refreshTokenIfNeeded()
+
         let url = URL(string: "\(baseURL)/organizations/\(orgSlug)/replays/\(replayId)/recording-segments/")!
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         if let authToken = getAuthToken() {
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         }
-        
+
         let (data, response) = try await session.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
         }
-        
+
+        // Handle 401 Unauthorized - token may be invalid or expired
+        if httpResponse.statusCode == 401 {
+            throw APIError.unauthorized
+        }
+
         guard httpResponse.statusCode == 200 else {
             throw APIError.httpError(httpResponse.statusCode)
         }
-        
+
         do {
             guard let jsonObject = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
                 throw APIError.decodingError
             }
-            
+
             let segments = parseSegmentsFromJSON(jsonObject)
             return segments.isEmpty ? createMockSegments() : segments
         } catch {
@@ -48,6 +56,13 @@ class SentryAPIService: ObservableObject {
     }
     
     private func getAuthToken() -> String? {
+        // Try to get OAuth token from Keychain first
+        if let oauthToken = KeychainManager.shared.getAccessToken() {
+            return oauthToken
+        }
+
+        // Fall back to UserDefaults for backward compatibility
+        // TODO: Remove this fallback after migration period
         return UserDefaults.standard.string(forKey: "SentryAuthToken")
     }
     
@@ -338,7 +353,8 @@ enum APIError: Error, LocalizedError {
     case invalidResponse
     case httpError(Int)
     case decodingError
-    
+    case unauthorized
+
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
@@ -347,6 +363,8 @@ enum APIError: Error, LocalizedError {
             return "HTTP error with status code: \(code)"
         case .decodingError:
             return "Failed to decode response data"
+        case .unauthorized:
+            return "Unauthorized. Please login with OAuth."
         }
     }
 }

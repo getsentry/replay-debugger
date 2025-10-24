@@ -29,5 +29,6 @@ struct SentryReplayDebuggerApp: App {
         }
         .windowResizability(.contentSize)
         .windowToolbarStyle(.unifiedCompact)
+        .handlesExternalEvents(matching: Set(arrayLiteral: "sentry-replay-debugger"))
     }
 }
