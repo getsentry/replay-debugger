@@ -12,6 +12,7 @@
 		28651E432E91A7290087E7DD /* RRWebHTMLConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28651E422E91A7290087E7DD /* RRWebHTMLConverter.swift */; };
 		28651E452E91A9BF0087E7DD /* HTMLBeautifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28651E442E91A9BF0087E7DD /* HTMLBeautifier.swift */; };
 		28651E472E91A9C80087E7DD /* HTMLSourceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28651E462E91A9C80087E7DD /* HTMLSourceView.swift */; };
+		288DBE6D2EAD62C20093FC9E /* ReplayDebuggerIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 288DBE6C2EAD62C20093FC9E /* ReplayDebuggerIcon.icon */; };
 		28CF12952E96F5E400116F07 /* CURLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28CF12942E96F5E400116F07 /* CURLParser.swift */; };
 		694FD666B3E14DFC8624CFAA /* RRWebEventProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFACDF4DE5646BEAC5276DE /* RRWebEventProcessor.swift */; };
 		6CF01FE061AF421CBB1352C6 /* DOMNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = C516FA0458D3442284511A93 /* DOMNode.swift */; };
@@ -46,12 +47,15 @@
 
 /* Begin PBXFileReference section */
 		280DC53E2EAC064F00125EB1 /* SentryReplayDebuggerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SentryReplayDebuggerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		280DC5552EAC0C0900125EB1 /* SentryReplayDebugger.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = file; path = SentryReplayDebugger.xctestplan; sourceTree = "<group>"; };
+		280DC5552EAC0C0900125EB1 /* SentryReplayDebugger.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = SentryReplayDebugger.xctestplan; sourceTree = "<group>"; };
 		280DC55A2EAC255200125EB1 /* SentryReplayDebuggerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SentryReplayDebuggerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		280DC57F2EAC2C5000125EB1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		280DC5802EAC2C8D00125EB1 /* SentryReplayDebuggerRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SentryReplayDebuggerRelease.entitlements; sourceTree = "<group>"; };
 		28651E402E91A7210087E7DD /* HTMLRendererView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLRendererView.swift; sourceTree = "<group>"; };
 		28651E422E91A7290087E7DD /* RRWebHTMLConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RRWebHTMLConverter.swift; sourceTree = "<group>"; };
 		28651E442E91A9BF0087E7DD /* HTMLBeautifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLBeautifier.swift; sourceTree = "<group>"; };
 		28651E462E91A9C80087E7DD /* HTMLSourceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLSourceView.swift; sourceTree = "<group>"; };
+		288DBE6C2EAD62C20093FC9E /* ReplayDebuggerIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = ReplayDebuggerIcon.icon; sourceTree = "<group>"; };
 		28CF12942E96F5E400116F07 /* CURLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CURLParser.swift; sourceTree = "<group>"; };
 		5FFACDF4DE5646BEAC5276DE /* RRWebEventProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RRWebEventProcessor.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF002 /* SentryReplayDebuggerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryReplayDebuggerApp.swift; sourceTree = "<group>"; };
@@ -108,12 +112,15 @@
 				280DC53F2EAC064F00125EB1 /* SentryReplayDebuggerTests */,
 				280DC55B2EAC255200125EB1 /* SentryReplayDebuggerUITests */,
 				A1234567890ABCDEF014 /* Products */,
+				288DBE6C2EAD62C20093FC9E /* ReplayDebuggerIcon.icon */,
 			);
 			sourceTree = "<group>";
 		};
 		A1234567890ABCDEF013 /* SentryReplayDebugger */ = {
 			isa = PBXGroup;
 			children = (
+				280DC5802EAC2C8D00125EB1 /* SentryReplayDebuggerRelease.entitlements */,
+				280DC57F2EAC2C5000125EB1 /* Info.plist */,
 				A1234567890ABCDEF002 /* SentryReplayDebuggerApp.swift */,
 				A1234567890ABCDEF004 /* ContentView.swift */,
 				A1234567890ABCDEF041 /* Config.swift */,
@@ -320,6 +327,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				288DBE6D2EAD62C20093FC9E /* ReplayDebuggerIcon.icon in Resources */,
 				A1234567890ABCDEF007 /* Preview Assets.xcassets in Resources */,
 				A1234567890ABCDEF005 /* Assets.xcassets in Resources */,
 			);
@@ -597,8 +605,9 @@
 		A1234567890ABCDEF028 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = ReplayDebuggerIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = SentryReplayDebugger/SentryReplayDebugger.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -609,6 +618,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SentryReplayDebugger/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -628,9 +638,10 @@
 		A1234567890ABCDEF029 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = ReplayDebuggerIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = SentryReplayDebugger/SentryReplayDebugger.entitlements;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = SentryReplayDebugger/SentryReplayDebuggerRelease.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -642,6 +653,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SentryReplayDebugger/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
