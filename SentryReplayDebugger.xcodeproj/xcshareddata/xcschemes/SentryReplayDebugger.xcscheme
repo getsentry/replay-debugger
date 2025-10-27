@@ -79,6 +79,13 @@
             ReferencedContainer = "container:SentryReplayDebugger.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "SENTRY_DSN"
+            value = "https://d1cba8978af7340dd9685d1191cc9d25@o1.ingest.us.sentry.io/4510246483656704"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
