@@ -203,17 +203,17 @@ struct ContentView: View {
 
     private var totalSegmentsDuration: String? {
         guard !segments.isEmpty else { return nil }
-        
+
         let allTimestamps = segments.flatMap { segment in
-            segment.events(useSortedOrder: useSortedOrder).map { $0.timestamp }
+            segment.events(useSortedOrder: useSortedOrder).map { $0.effectiveTimestamp }
         }
-        
+
         guard let firstTimestamp = allTimestamps.min(),
               let lastTimestamp = allTimestamps.max(),
               firstTimestamp != lastTimestamp else {
             return nil
         }
-        
+
         return formatDuration(lastTimestamp.timeIntervalSince(firstTimestamp))
     }
     
@@ -1246,7 +1246,7 @@ struct ContentView: View {
     private func timeFromStart(for event: ReplayEvent) -> String? {
         guard !allEvents.isEmpty else { return nil }
         let firstEvent = allEvents[0]
-        let timeDiff = event.timestamp.timeIntervalSince(firstEvent.timestamp)
+        let timeDiff = event.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp)
 
         // Format as +MM:SS.mmm
         let minutes = Int(timeDiff) / 60
@@ -2037,12 +2037,12 @@ struct ContentView: View {
     private func eventsDuration(for segment: ReplaySegment) -> String? {
         let events = segment.events(useSortedOrder: useSortedOrder)
         guard events.count > 1,
-              let firstEvent = events.min(by: { $0.timestamp < $1.timestamp }),
-              let lastEvent = events.max(by: { $0.timestamp < $1.timestamp }) else {
+              let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
+              let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }) else {
             return nil
         }
-        
-        return formatDuration(lastEvent.timestamp.timeIntervalSince(firstEvent.timestamp))
+
+        return formatDuration(lastEvent.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp))
     }
     
     private func formatDuration(_ duration: TimeInterval) -> String {

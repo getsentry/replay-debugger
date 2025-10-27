@@ -62,12 +62,41 @@ struct ReplayEvent: Identifiable, Hashable {
     let type: Int  // Raw EventType enum value (0-6)
     let timestamp: Date
     let data: [String: Any]
-    
+
     init(id: String, type: Int, timestamp: Date, data: [String: Any]) {
         self.id = id
         self.type = type
         self.timestamp = timestamp
         self.data = data
+    }
+
+    /// Returns the effective timestamp for this event.
+    /// For events with an endTimestamp (like resource/fetch events), returns the endTimestamp
+    /// since that's when the event was actually captured. Otherwise returns the startTimestamp.
+    var effectiveTimestamp: Date {
+        // Check if there's an endTimestamp in the data
+        if let endTimestamp = data["endTimestamp"] as? TimeInterval {
+            return parseTimestamp(endTimestamp) ?? timestamp
+        }
+        return timestamp
+    }
+
+    private func parseTimestamp(_ value: TimeInterval) -> Date? {
+        // Check if timestamp is in milliseconds
+        // Use a more reasonable threshold: Jan 1, 2020 in seconds (1577836800)
+        if value > 1577836800 {
+            // Could be milliseconds - check if it's way too large for seconds
+            if value > 1577836800000 {
+                // Definitely milliseconds, convert to seconds
+                return Date(timeIntervalSince1970: value / 1000)
+            } else {
+                // Likely seconds (between 2020-2050 range)
+                return Date(timeIntervalSince1970: value)
+            }
+        } else {
+            // Old timestamp, likely seconds
+            return Date(timeIntervalSince1970: value)
+        }
     }
 
     static func == (lhs: ReplayEvent, rhs: ReplayEvent) -> Bool {

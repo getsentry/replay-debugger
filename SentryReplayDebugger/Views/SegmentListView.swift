@@ -10,30 +10,30 @@ struct SegmentListView: View {
     
     private var totalSegmentsDuration: String? {
         guard !segments.isEmpty else { return nil }
-        
-        // Get all timestamps from all events across all segments
+
+        // Get all effective timestamps from all events across all segments
         let allTimestamps = segments.flatMap { segment in
-            segment.events(useSortedOrder: useSortedOrder).map { $0.timestamp }
+            segment.events(useSortedOrder: useSortedOrder).map { $0.effectiveTimestamp }
         }
-        
+
         guard let firstTimestamp = allTimestamps.min(),
               let lastTimestamp = allTimestamps.max(),
               firstTimestamp != lastTimestamp else {
             return nil
         }
-        
+
         return formatDuration(lastTimestamp.timeIntervalSince(firstTimestamp))
     }
     
     private func eventsDuration(for segment: ReplaySegment) -> String? {
         let events = segment.events(useSortedOrder: useSortedOrder)
         guard events.count > 1,
-              let firstEvent = events.min(by: { $0.timestamp < $1.timestamp }),
-              let lastEvent = events.max(by: { $0.timestamp < $1.timestamp }) else {
+              let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
+              let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }) else {
             return nil
         }
-        
-        return formatDuration(lastEvent.timestamp.timeIntervalSince(firstEvent.timestamp))
+
+        return formatDuration(lastEvent.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp))
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -258,9 +258,9 @@ struct SegmentListView: View {
             var durationWidth: CGFloat = 0
             let events = segment.sortedEvents  // OPTIMIZATION: Store in local variable
             if events.count > 1,
-               let firstEvent = events.min(by: { $0.timestamp < $1.timestamp }),
-               let lastEvent = events.max(by: { $0.timestamp < $1.timestamp }) {
-                let duration = formatDuration(lastEvent.timestamp.timeIntervalSince(firstEvent.timestamp))
+               let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
+               let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }) {
+                let duration = formatDuration(lastEvent.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp))
                 // Icon width (approx 10pt) + spacing + text width
                 durationWidth = 10 + 2 + duration.widthOfString(usingFont: captionFont) + 8 // extra spacing
             }
@@ -323,12 +323,12 @@ struct SegmentRowView: View {
         // OPTIMIZATION: Store sortedEvents in local variable to avoid repeated property access
         let events = (originalSegment ?? segment).sortedEvents
         guard events.count > 1,
-              let firstEvent = events.min(by: { $0.timestamp < $1.timestamp }),
-              let lastEvent = events.max(by: { $0.timestamp < $1.timestamp }) else {
+              let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
+              let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }) else {
             return nil
         }
 
-        let duration = lastEvent.timestamp.timeIntervalSince(firstEvent.timestamp)
+        let duration = lastEvent.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp)
         return formatDuration(duration)
     }
 
@@ -481,7 +481,7 @@ struct EventRowView: View {
 
     private var timeDifferenceFromPrevious: String? {
         guard let previous = previousEvent else { return nil }
-        let timeDiff = event.timestamp.timeIntervalSince(previous.timestamp)
+        let timeDiff = event.effectiveTimestamp.timeIntervalSince(previous.effectiveTimestamp)
         return formatTimeDiff(timeDiff)
     }
 
@@ -565,9 +565,9 @@ struct EventRowView: View {
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Button(action: {
-                        onTimestampClick?(event.timestamp)
+                        onTimestampClick?(event.effectiveTimestamp)
                     }) {
-                        Text(formatTimestamp(event.timestamp))
+                        Text(formatTimestamp(event.effectiveTimestamp))
                             .font(.system(.caption, design: .monospaced))
                             .foregroundColor(.secondary)
                     }
