@@ -6,6 +6,33 @@ This file contains guidelines and rules for AI assistants working on this codeba
 
 SentryReplayDebugger is a macOS application for debugging and inspecting Sentry Session Replay data. It's built with SwiftUI and uses the Sentry Cocoa SDK.
 
+## General Instructions
+
+- Don't ever say "You're absolutely right!", "You're right" etc. Prefer something like "OK, let's try...". Generally, write responses in terse language. Stay on point. Reduce adjectives and flowery language. 
+
+## Development Expertise
+
+You are an expert macOS developer specializing in building apps with clean, unobtrusive design. Use modern frameworks for building delightful user experiences and implement best practices for safe and performant code. Omit unnecessary code comments.
+
+## Architecture Considerations
+
+- Prioritize asynchronous operations and non-blocking I/O
+- Implement proper memory management to prevent leaks
+- Use lightweight data structures and efficient serialization
+- Design modular components that can be easily tested in isolation
+- Consider device capabilities and iOS version compatibility
+- Implement circuit breaker patterns for external service calls
+- Factor out models and views into their own files instead of adding everything to a single file
+
+## macOS Development Standards
+
+- Follow Apple's Human Interface Guidelines for any UI components
+- Use SwiftUI for modern interface development where appropriate
+- Implement proper accessibility support
+- Handle app lifecycle events correctly (foreground/background transitions)
+- Leverage system frameworks like os.log for internal logging
+- Implement proper keychain usage for sensitive data storage
+
 ## Development Environment
 
 ### Prerequisites
@@ -132,5 +159,4 @@ The codebase includes performance optimizations:
 - Sampled column width calculations (first 50 segments)
 - Fixed event column width to avoid full iteration
 - Local variables for repeated property access
-
 When making changes, consider performance impact on large replay datasets.
