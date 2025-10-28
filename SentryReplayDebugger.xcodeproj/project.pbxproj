@@ -26,6 +26,7 @@
 		A1234567890ABCDEF036 /* JSONInspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF037 /* JSONInspectorView.swift */; };
 		A1234567890ABCDEF038 /* SegmentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF039 /* SegmentListView.swift */; };
 		A1234567890ABCDEF040 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF041 /* Config.swift */; };
+		A1234567890ABCDEF042 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF043 /* EmptyStateView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,6 +71,7 @@
 		A1234567890ABCDEF037 /* JSONInspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONInspectorView.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF039 /* SegmentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentListView.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF041 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF043 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		C516FA0458D3442284511A93 /* DOMNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMNode.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -156,6 +158,7 @@
 		A1234567890ABCDEF016 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A1234567890ABCDEF043 /* EmptyStateView.swift */,
 				28651E462E91A9C80087E7DD /* HTMLSourceView.swift */,
 				28651E402E91A7210087E7DD /* HTMLRendererView.swift */,
 				A1234567890ABCDEF037 /* JSONInspectorView.swift */,
@@ -369,6 +372,7 @@
 				A1234567890ABCDEF036 /* JSONInspectorView.swift in Sources */,
 				A1234567890ABCDEF038 /* SegmentListView.swift in Sources */,
 				A1234567890ABCDEF040 /* Config.swift in Sources */,
+				A1234567890ABCDEF042 /* EmptyStateView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

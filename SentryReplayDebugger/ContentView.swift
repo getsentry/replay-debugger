@@ -637,28 +637,36 @@ struct ContentView: View {
     }
 
     private var sidebarContent: some View {
-        ScrollViewReader { proxy in
-            List(selection: $selectedSegment) {
-                ForEach(Array(filteredSegments.enumerated()), id: \.element.id) { index, segment in
-                    segmentRowWithDivider(segment: segment, index: index)
-                        .id(segment.id)
-                }
-            }
-            .listStyle(.sidebar)
-            .environment(\.controlActiveState, .key)
-            .onChange(of: selectedSegment) {
-                if let segment = selectedSegment {
-                    selectedEvent = segment.events(useSortedOrder: useSortedOrder).first
-                    // Only scroll if this selection is from search
-                    if shouldScrollToSelection {
-                        withAnimation {
-                            proxy.scrollTo(segment.id, anchor: .center)
+        Group {
+            if segments.isEmpty {
+                EmptyStateView()
+                    .navigationTitle("Segments")
+                    .navigationSubtitle("0 segments")
+            } else {
+                ScrollViewReader { proxy in
+                    List(selection: $selectedSegment) {
+                        ForEach(Array(filteredSegments.enumerated()), id: \.element.id) { index, segment in
+                            segmentRowWithDivider(segment: segment, index: index)
+                                .id(segment.id)
                         }
                     }
+                    .listStyle(.sidebar)
+                    .environment(\.controlActiveState, .key)
+                    .onChange(of: selectedSegment) {
+                        if let segment = selectedSegment {
+                            selectedEvent = segment.events(useSortedOrder: useSortedOrder).first
+                            // Only scroll if this selection is from search
+                            if shouldScrollToSelection {
+                                withAnimation {
+                                    proxy.scrollTo(segment.id, anchor: .center)
+                                }
+                            }
+                        }
+                    }
+                    .navigationTitle("Segments")
+                    .navigationSubtitle(segmentSubtitle)
                 }
             }
-            .navigationTitle("Segments")
-            .navigationSubtitle(segmentSubtitle)
         }
     }
 
@@ -1486,6 +1494,7 @@ struct ContentView: View {
     }
     
     private func loadDebugJSON() {
+        #if DEBUG
         let debugFilePath = "billy.json"
         let fileURL = URL(fileURLWithPath: debugFilePath)
 
@@ -1535,6 +1544,7 @@ struct ContentView: View {
         } catch {
             NSLog("❌ Failed to load debug file: \(error.localizedDescription)")
         }
+        #endif
     }
 
     private func loadFromClipboard() {
