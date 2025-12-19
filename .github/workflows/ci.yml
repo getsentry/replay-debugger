@@ -1,0 +1,66 @@
+name: ⚙️ CI
+
+on:
+  push:
+    branches:
+      - "main"
+      - "release/**"
+    paths-ignore:
+      - "*.md"
+
+  pull_request:
+    paths-ignore:
+      - "*.md"
+
+# Cancel in-progress runs on PR update and on push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: 🛠️ Build app
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Build app
+        run: |
+          xcodebuild build \
+              -project SentryReplayDebugger.xcodeproj \
+              -scheme SentryReplayDebugger \
+              -configuration Release \
+              -destination 'platform=macOS,arch=arm64' \
+              CODE_SIGNING_ALLOWED=NO
+
+      - name: Create app zip
+        run: |
+          cd ~/Library/Developer/Xcode/DerivedData/SentryReplayDebugger-*/Build/Products/Release
+          zip -r --symlinks "${{ github.workspace }}/SentryReplayDebugger.zip" SentryReplayDebugger.app
+
+      - name: Upload app bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ github.sha }}
+          path: SentryReplayDebugger.zip
+
+  test:
+    name: 🧪 Run tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+              -project SentryReplayDebugger.xcodeproj \
+              -scheme SentryReplayDebugger \
+              -configuration Debug \
+              -destination 'platform=macOS,arch=arm64' \
+              -only-testing:SentryReplayDebuggerTests \
+              CODE_SIGNING_ALLOWED=NO
