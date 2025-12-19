@@ -22,7 +22,6 @@ jobs:
               -project SentryReplayDebugger.xcodeproj \
               -scheme SentryReplayDebugger \
               -configuration Release \
-              -destination 'platform=macOS,arch=arm64' \
               CODE_SIGNING_ALLOWED=NO
 
       - name: Create app zip
