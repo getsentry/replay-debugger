@@ -40,7 +40,7 @@ jobs:
       - name: Create app zip
         run: |
           cd ~/Library/Developer/Xcode/DerivedData/SentryReplayDebugger-*/Build/Products/Release
-          zip -r "${{ github.sha }}.zip" SentryReplayDebugger.app
+          zip -r "${{ github.workspace }}/${{ github.sha }}.zip" SentryReplayDebugger.app
 
       - name: Upload app bundle
         uses: actions/upload-artifact@v6
