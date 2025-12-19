@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: 🛠️ Build app
+    name: Build app
     runs-on: macos-latest
     steps:
       - name: Checkout repo
