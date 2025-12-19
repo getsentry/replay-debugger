@@ -37,11 +37,15 @@ jobs:
               -destination 'platform=macOS,arch=arm64' \
               CODE_SIGNING_ALLOWED=NO
 
+      - name: Create app zip
+        run: |
+          cd ~/Library/Developer/Xcode/DerivedData/SentryReplayDebugger-*/Build/Products/Release
+          zip -r "${{ github.sha }}.zip" SentryReplayDebugger.app
+
       - name: Upload app bundle
         uses: actions/upload-artifact@v6
         with:
-          name: SentryReplayDebugger.app
-          path: ~/Library/Developer/Xcode/DerivedData/SentryReplayDebugger-*/Build/Products/Release/SentryReplayDebugger.app
+          path: ${{ github.sha }}.zip
 
   test:
     name: 🧪 Run tests
