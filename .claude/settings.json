@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/update-linear-issue.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

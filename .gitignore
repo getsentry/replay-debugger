@@ -117,7 +117,6 @@ Temporary Items
 .apdisk
 
 # Debug files
-*.json
 billy.json
 segment*.json
 sentry-replay-debug.html
