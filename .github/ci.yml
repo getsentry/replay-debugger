@@ -23,7 +23,7 @@ permissions:
 jobs:
   build:
     name: 🛠️ Build app
-    runner: macos-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
@@ -34,4 +34,21 @@ jobs:
               -scheme SentryReplayDebugger \
               -configuration Release \
               CODE_SIGNING_ALLOWED=NO \
-              clean build
+              -destination 'platform=macOS,arch=arm64' \
+              build
+
+  test:
+    name: 🧪 Run tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Run tests
+        run: |
+          xcodebuild -project SentryReplayDebugger.xcodeproj \
+              -scheme SentryReplayDebugger \
+              -configuration Debug \
+              CODE_SIGNING_ALLOWED=NO \
+              -destination 'platform=macOS,arch=arm64'
+              test
