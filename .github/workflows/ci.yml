@@ -37,6 +37,12 @@ jobs:
               -destination 'platform=macOS,arch=arm64' \
               CODE_SIGNING_ALLOWED=NO
 
+      - name: Upload app bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: SentryReplayDebugger.app
+          path: ~/Library/Developer/Xcode/DerivedData/SentryReplayDebugger-*/Build/Products/Release/SentryReplayDebugger.app
+
   test:
     name: 🧪 Run tests
     runs-on: macos-latest
