@@ -30,12 +30,12 @@ jobs:
 
       - name: Build app
         run: |
-          xcodebuild -project SentryReplayDebugger.xcodeproj \
+          xcodebuild build \
+              -project SentryReplayDebugger.xcodeproj \
               -scheme SentryReplayDebugger \
               -configuration Release \
-              CODE_SIGNING_ALLOWED=NO \
               -destination 'platform=macOS,arch=arm64' \
-              build
+              CODE_SIGNING_ALLOWED=NO
 
   test:
     name: 🧪 Run tests
@@ -46,9 +46,10 @@ jobs:
 
       - name: Run tests
         run: |
-          xcodebuild -project SentryReplayDebugger.xcodeproj \
+          xcodebuild test \
+              -project SentryReplayDebugger.xcodeproj \
               -scheme SentryReplayDebugger \
               -configuration Debug \
-              CODE_SIGNING_ALLOWED=NO \
-              -destination 'platform=macOS,arch=arm64'
-              test
+              -destination 'platform=macOS,arch=arm64' \
+              -only-testing:SentryReplayDebuggerTests \
+              CODE_SIGNING_ALLOWED=NO
