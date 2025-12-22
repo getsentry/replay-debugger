@@ -50,7 +50,7 @@ jobs:
               PRODUCT_BUNDLE_IDENTIFIER="io.sentry.SentryReplayDebugger" \
               CODE_SIGN_IDENTITY="Developer ID Application" \
               CODE_SIGN_STYLE=Manual \
-              PROVISIONING_PROFILE_SPECIFIER="match DeveloperID io.sentry.SentryReplayDebugger" \
+              PROVISIONING_PROFILE_SPECIFIER="match Direct io.sentry.SentryReplayDebugger macos" \
               DEVELOPMENT_TEAM="97JCY7859U"
 
       - name: Create app zip
