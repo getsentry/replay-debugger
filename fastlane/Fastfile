@@ -3,8 +3,8 @@
 default_platform(:mac)
 
 platform :mac do
-  desc "Import signing certificates and provisioning profiles to keychain"
 
+  desc "Import signing certificates and provisioning profiles to keychain"
   lane :prepare_signing do
   	setup_ci if is_ci
 
@@ -15,6 +15,7 @@ platform :mac do
     )
   end
 
+  desc "Build the release version of the app"
   lane :build_release do
     gym(
       project: "SentryReplayDebugger.xcodeproj",
