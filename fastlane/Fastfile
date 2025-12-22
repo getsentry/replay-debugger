@@ -1,0 +1,16 @@
+# Fastfile
+
+default_platform(:mac)
+
+platform :mac do
+  desc "Import signing certificates and provisioning profiles to keychain"
+
+  lane :prepare_signing do
+    sync_code_signing(
+      type: "adhoc",
+      readonly: true,
+      app_identifier: ["io.sentry.SentryReplayDebugger"], # Q: Appfile has it, remove??
+    )
+  end
+
+end
