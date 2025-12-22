@@ -1,0 +1,31 @@
+name: 🧪 Test
+
+on:
+  workflow_call:
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.arch }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x86_64]
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+              -project SentryReplayDebugger.xcodeproj \
+              -scheme SentryReplayDebugger \
+              -configuration Debug \
+              -destination 'platform=macOS,arch=${{ matrix.arch }}' \
+              -only-testing:SentryReplayDebuggerTests \
+              CODE_SIGNING_ALLOWED=NO

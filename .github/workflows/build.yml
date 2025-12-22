@@ -1,0 +1,37 @@
+name: 🛠️ Build
+
+on:
+  workflow_call:
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build app
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Build app
+        run: |
+          xcodebuild build \
+              -project SentryReplayDebugger.xcodeproj \
+              -scheme SentryReplayDebugger \
+              -configuration Release \
+              -destination 'generic/platform=macOS' \
+              CODE_SIGNING_ALLOWED=NO
+
+      - name: Create app zip
+        run: |
+          cd ~/Library/Developer/Xcode/DerivedData/SentryReplayDebugger-*/Build/Products/Release
+          zip -r --symlinks "${{ github.workspace }}/SentryReplayDebugger.zip" SentryReplayDebugger.app
+
+      - name: Upload app bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ github.sha }}
+          path: SentryReplayDebugger.zip
