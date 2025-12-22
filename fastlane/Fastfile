@@ -23,7 +23,6 @@ platform :mac do
       destination: "generic/platform=macOS",
       skip_package_pkg: true,
       skip_archive: true,
-      build_path: "./build",
       xcargs: {
         'CODE_SIGN_STYLE' => 'Manual',
         'CODE_SIGN_IDENTITY' => 'Developer ID Application',
