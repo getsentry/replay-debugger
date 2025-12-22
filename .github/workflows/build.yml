@@ -61,7 +61,7 @@ jobs:
       - name: Notarize app bundle
         if: inputs.notarize
         run: |
-          echo "::warning::Not implemented yet"
+          echo "::warning::Notarization is not implemented yet"
 
       - name: Upload app bundle
         uses: actions/upload-artifact@v6
