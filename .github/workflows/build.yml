@@ -41,21 +41,15 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
 
       - name: Build app
-        run: |
-          xcodebuild build \
-              -project SentryReplayDebugger.xcodeproj \
-              -scheme SentryReplayDebugger \
-              -configuration Release \
-              -destination 'generic/platform=macOS' \
-              PRODUCT_BUNDLE_IDENTIFIER="io.sentry.SentryReplayDebugger" \
-              CODE_SIGN_IDENTITY="Developer ID Application" \
-              CODE_SIGN_STYLE=Manual \
-              PROVISIONING_PROFILE_SPECIFIER="match Direct io.sentry.SentryReplayDebugger macos" \
-              DEVELOPMENT_TEAM="97JCY7859U"
+        run: bundle exec fastlane build_release
+        env:
+          FASTLANE_KEYCHAIN_PASSWORD: ${{ secrets.FASTLANE_KEYCHAIN_PASSWORD }}
+          MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
 
       - name: Create app zip
         run: |
-          cd ~/Library/Developer/Xcode/DerivedData/SentryReplayDebugger-*/Build/Products/Release
+          cd build/Release
           zip -r --symlinks "${{ github.workspace }}/SentryReplayDebugger.zip" SentryReplayDebugger.app
 
       - name: Notarize app bundle

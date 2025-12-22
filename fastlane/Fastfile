@@ -11,7 +11,25 @@ platform :mac do
     sync_code_signing(
       type: "developer_id",
       readonly: true,
-      app_identifier: ["io.sentry.SentryReplayDebugger"], # Q: Appfile has it, remove??
+      app_identifier: [CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)],
+    )
+  end
+
+  lane :build_release do
+    gym(
+      project: "SentryReplayDebugger.xcodeproj",
+      scheme: "SentryReplayDebugger",
+      configuration: "Release",
+      destination: "generic/platform=macOS",
+      skip_package_pkg: true,
+      skip_archive: true,
+      build_path: "./build",
+      xcargs: {
+        'CODE_SIGN_STYLE' => 'Manual',
+        'CODE_SIGN_IDENTITY' => 'Developer ID Application',
+        'DEVELOPMENT_TEAM' => CredentialsManager::AppfileConfig.try_fetch_value(:team_id),
+        'PROVISIONING_PROFILE_SPECIFIER' => "match Direct #{CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)} macos"
+      }
     )
   end
 
