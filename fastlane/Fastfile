@@ -27,6 +27,7 @@ platform :mac do
       xcargs: {
         'CODE_SIGN_STYLE' => 'Manual',
         'CODE_SIGN_IDENTITY' => 'Developer ID Application',
+        'PRODUCT_BUNDLE_IDENTIFIER' => CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier),
         'DEVELOPMENT_TEAM' => CredentialsManager::AppfileConfig.try_fetch_value(:team_id),
         'PROVISIONING_PROFILE_SPECIFIER' => "match Direct #{CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)} macos"
       }
