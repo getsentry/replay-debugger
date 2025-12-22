@@ -49,6 +49,7 @@ jobs:
               -destination 'generic/platform=macOS' \
               PRODUCT_BUNDLE_IDENTIFIER="io.sentry.SentryReplayDebugger" \
               CODE_SIGN_IDENTITY="Developer ID Application" \
+              CODE_SIGN_STYLE=Manual \
               DEVELOPMENT_TEAM="97JCY7859U"
 
       - name: Create app zip
