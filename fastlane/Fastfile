@@ -9,7 +9,7 @@ platform :mac do
   	setup_ci if is_ci
 
     sync_code_signing(
-      type: "adhoc",
+      type: "developer_id",
       readonly: true,
       app_identifier: ["io.sentry.SentryReplayDebugger"], # Q: Appfile has it, remove??
     )
