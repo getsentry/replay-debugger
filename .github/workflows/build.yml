@@ -14,6 +14,12 @@ on:
         required: true
       MATCH_PASSWORD:
         required: true
+      APP_STORE_CONNECT_KEY_ID:
+        required: true
+      APP_STORE_CONNECT_ISSUER_ID:
+        required: true
+      APP_STORE_CONNECT_KEY:
+        required: true
 
 permissions:
   contents: read
@@ -33,31 +39,34 @@ jobs:
           ruby-version: 3.4.8
           bundler-cache: true
 
-      - name: "Import certificate and profile"
-        run: bundle exec fastlane prepare_signing
+      - name: Import certificate and profile
         env:
           FASTLANE_KEYCHAIN_PASSWORD: ${{ secrets.FASTLANE_KEYCHAIN_PASSWORD }}
           MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: bundle exec fastlane prepare_signing
 
       - name: Build app
-        run: bundle exec fastlane build_release
         env:
           FASTLANE_KEYCHAIN_PASSWORD: ${{ secrets.FASTLANE_KEYCHAIN_PASSWORD }}
           MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: bundle exec fastlane build_release
 
-      - name: Create app zip
+      - name: Zip app
         run: |
           cd ~/Library/Developer/Xcode/DerivedData/SentryReplayDebugger-*/Build/Products/Release
           zip -r --symlinks "${{ github.workspace }}/SentryReplayDebugger.zip" SentryReplayDebugger.app
 
-      - name: Notarize app bundle
+      - name: Notarize app
         if: inputs.notarize
-        run: |
-          echo "::warning::Notarization is not implemented yet"
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: bundle exec fastlane notarize_app
 
-      - name: Upload app bundle
+      - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
           name: ${{ github.sha }}

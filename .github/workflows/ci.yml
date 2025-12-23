@@ -29,7 +29,8 @@ jobs:
     name: 🛠️ Build
     uses: ./.github/workflows/build.yml
     with:
-      # TODO: Detect release branch and set it to true only for releases.
+      # Notarize only for release branches
+      # notarize: ${{ startsWith(github.ref, 'refs/heads/release/') }}
       notarize: true
     secrets:
       FASTLANE_KEYCHAIN_PASSWORD: ${{ secrets.FASTLANE_KEYCHAIN_PASSWORD }}

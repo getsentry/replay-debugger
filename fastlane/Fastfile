@@ -6,7 +6,7 @@ platform :mac do
 
   desc "Import signing certificates and provisioning profiles to keychain"
   lane :prepare_signing do
-  	setup_ci if is_ci
+    setup_ci if is_ci
 
     sync_code_signing(
       type: "developer_id",
@@ -31,6 +31,20 @@ platform :mac do
         'DEVELOPMENT_TEAM' => CredentialsManager::AppfileConfig.try_fetch_value(:team_id),
         'PROVISIONING_PROFILE_SPECIFIER' => "match Direct #{CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)} macos"
       }
+    )
+  end
+
+  desc "Notarize app"
+  lane :notarize_app do
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_KEY"]
+    )
+
+    notarize(
+      package: "SentryReplayDebugger.zip",
+      bundle_id: CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier),
     )
   end
 
