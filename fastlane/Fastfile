@@ -34,18 +34,22 @@ platform :mac do
     )
   end
 
-  desc "Notarize app"
-  lane :notarize_app do
-    app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
-      key_content: ENV["APP_STORE_CONNECT_KEY"]
-    )
+    desc "Notarize app"
+    lane :notarize_app do |options|
+      zip_path = options[:zip_path] || "SentryReplayDebugger.zip"
+      api_key_path = "/tmp/AuthKey.p8"
+      File.write(api_key_path, ENV["APP_STORE_CONNECT_KEY"])
 
-    notarize(
-      package: "SentryReplayDebugger.zip",
-      bundle_id: CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier),
-    )
-  end
+      sh(
+        "xcrun notarytool submit #{zip_path} " \
+        "--key #{api_key_path} " \
+        "--key-id #{ENV['APP_STORE_CONNECT_KEY_ID']} " \
+        "--issuer #{ENV['APP_STORE_CONNECT_ISSUER_ID']} " \
+        "--wait"
+      )
+
+      # Clean up temporary key file
+      File.delete(api_key_path) if File.exist?(api_key_path)
+    end
 
 end
