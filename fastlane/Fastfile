@@ -30,7 +30,8 @@ platform :mac do
         'PRODUCT_BUNDLE_IDENTIFIER' => CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier),
         'DEVELOPMENT_TEAM' => CredentialsManager::AppfileConfig.try_fetch_value(:team_id),
         'PROVISIONING_PROFILE_SPECIFIER' => "match Direct #{CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)} macos",
-        'OTHER_CODE_SIGN_FLAGS' => '--timestamp'
+        'CODE_SIGN_ENTITLEMENTS' => 'SentryReplayDebugger/SentryReplayDebugger.Release.entitlements',
+        'OTHER_CODE_SIGN_FLAGS' => '--timestamp --options=runtime'
       }
     )
   end
