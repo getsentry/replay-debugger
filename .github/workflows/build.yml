@@ -64,7 +64,7 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
-        run: bundle exec fastlane notarize_app zip_path:"${{ github.workspace }}/SentryReplayDebugger.zip"
+        run: bundle exec fastlane notarize_app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
