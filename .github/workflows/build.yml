@@ -55,7 +55,6 @@ jobs:
 
       - name: Zip app
         run: |
-          ls -lR build
           cd build/Release
           zip -r --symlinks "${{ github.workspace }}/SentryReplayDebugger.zip" SentryReplayDebugger.app
 
