@@ -66,7 +66,7 @@ jobs:
       - name: Zip app
         run: |
           if [ ! -f "${APP_ARCHIVE}" ]; then
-            bundle exec fastlane zip_app
+            bundle exec fastlane zip_app zip_path:"${APP_ARCHIVE}"
           fi
 
       - name: Upload artifact
