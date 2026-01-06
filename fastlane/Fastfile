@@ -87,12 +87,12 @@ platform :mac do
     zip_path = options[:zip_path] || File.join(project_root, "build/Release/SentryReplayDebugger.zip")
     app_path = options[:app_path] || File.join(project_root, "build/Release/SentryReplayDebugger.app")
 
-    unless File.directory?(app_path)
-      UI.user_error!("App not found at #{app_path}. Make sure to build first.")
-    end
-
     zip_realpath = File.expand_path(zip_path)
     app_realpath = File.expand_path(app_path)
+
+    unless File.directory?(app_realpath)
+      UI.user_error!("App not found at #{app_path}. Make sure to build first.")
+    end
 
     sh("rm -f '#{zip_realpath}'") if File.exist?(zip_realpath)
 
