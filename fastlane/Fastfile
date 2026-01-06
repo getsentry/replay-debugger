@@ -39,9 +39,13 @@ platform :mac do
 
   desc "Notarize and staple app"
   lane :notarize_app do |options|
-    project_root = File.expand_path('..')
-    zip_path = options[:zip_path] || File.join(project_root, "build/Release/SentryReplayDebugger.zip")
-    app_path = options[:app_path] || File.join(project_root, "build/Release/SentryReplayDebugger.app")
+    # Calculate paths from project root
+    zip_path, app_path = Dir.chdir('..') do
+      [
+        File.expand_path(options[:zip_path] || "build/Release/SentryReplayDebugger.zip"),
+        File.expand_path(options[:app_path] || "build/Release/SentryReplayDebugger.app")
+      ]
+    end
 
     UI.message("Creating app archive: #{zip_path}")
     zip_app(zip_path: zip_path, app_path: app_path)
@@ -83,28 +87,29 @@ platform :mac do
 
   desc "Create zip archive from built app"
   lane :zip_app do |options|
-    project_root = File.expand_path('..')
-    zip_path = options[:zip_path] || File.join(project_root, "build/Release/SentryReplayDebugger.zip")
-    app_path = options[:app_path] || File.join(project_root, "build/Release/SentryReplayDebugger.app")
+    # Calculate paths from project root
+    zip_path, app_path = Dir.chdir('..') do
+      [
+        File.expand_path(options[:zip_path] || "build/Release/SentryReplayDebugger.zip"),
+        File.expand_path(options[:app_path] || "build/Release/SentryReplayDebugger.app")
+      ]
+    end
 
-    zip_realpath = File.expand_path(zip_path)
-    app_realpath = File.expand_path(app_path)
-
-    unless File.directory?(app_realpath)
+    unless File.directory?(app_path)
       UI.user_error!("App not found at #{app_path}. Make sure to build first.")
     end
 
-    sh("rm -f '#{zip_realpath}'") if File.exist?(zip_realpath)
+    sh("rm -f '#{zip_path}'") if File.exist?(zip_path)
 
-    zip_dir = File.dirname(zip_realpath)
+    zip_dir = File.dirname(zip_path)
     sh("mkdir -p '#{zip_dir}'") unless File.directory?(zip_dir)
 
-    app_dir = File.dirname(app_realpath)
-    app_name = File.basename(app_realpath)
+    app_dir = File.dirname(app_path)
+    app_name = File.basename(app_path)
 
-    sh("cd '#{app_dir}' && zip -r --symlinks '#{zip_realpath}' '#{app_name}'")
+    sh("cd '#{app_dir}' && zip -r --symlinks '#{zip_path}' '#{app_name}'")
 
-    UI.success("Created #{zip_realpath}.")
+    UI.success("Created #{zip_path}.")
   end
 
 end
