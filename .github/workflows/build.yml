@@ -64,10 +64,8 @@ jobs:
         run: bundle exec fastlane notarize_app zip_path:"${APP_ARCHIVE}"
 
       - name: Zip app
-        run: |
-          if [ ! -f "${APP_ARCHIVE}" ]; then
-            bundle exec fastlane zip_app zip_path:"${APP_ARCHIVE}"
-          fi
+        if: ${{ !inputs.notarize }}
+        run: bundle exec fastlane zip_app zip_path:"${APP_ARCHIVE}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
