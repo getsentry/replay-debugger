@@ -55,7 +55,7 @@ jobs:
 
       - name: Zip app
         run: |
-          cd ~/Library/Developer/Xcode/DerivedData/SentryReplayDebugger-*/Build/Products/Release
+          cd build
           zip -r --symlinks "${{ github.workspace }}/SentryReplayDebugger.zip" SentryReplayDebugger.app
 
       - name: Notarize app

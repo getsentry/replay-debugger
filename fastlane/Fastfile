@@ -22,6 +22,7 @@ platform :mac do
       scheme: "SentryReplayDebugger",
       configuration: "Release",
       destination: "generic/platform=macOS",
+      output_directory: "./build",
       skip_package_pkg: true,
       skip_archive: true,
       xcargs: {
