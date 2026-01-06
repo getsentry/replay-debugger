@@ -22,7 +22,6 @@ platform :mac do
       scheme: "SentryReplayDebugger",
       configuration: "Release",
       destination: "generic/platform=macOS",
-      output_directory: "./build",
       skip_package_pkg: true,
       skip_archive: true,
       xcargs: {
@@ -32,7 +31,8 @@ platform :mac do
         'DEVELOPMENT_TEAM' => CredentialsManager::AppfileConfig.try_fetch_value(:team_id),
         'PROVISIONING_PROFILE_SPECIFIER' => "match Direct #{CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)} macos",
         'CODE_SIGN_ENTITLEMENTS' => 'SentryReplayDebugger/SentryReplayDebugger.Release.entitlements',
-        'OTHER_CODE_SIGN_FLAGS' => '--timestamp --options=runtime'
+        'OTHER_CODE_SIGN_FLAGS' => '--timestamp --options=runtime',
+        'SYMROOT' => File.expand_path('./build')
       }
     )
   end
