@@ -39,8 +39,8 @@ platform :mac do
 
   desc "Notarize and staple app"
   lane :notarize_app do |options|
-    zip_path = options[:zip_path] || "build/Release/SentryReplayDebugger.zip"
-    app_path = options[:app_path] || "build/Release/SentryReplayDebugger.app"
+    zip_path = options[:zip_path] || "../build/Release/SentryReplayDebugger.zip"
+    app_path = options[:app_path] || "../build/Release/SentryReplayDebugger.app"
 
     UI.message("Creating app archive: #{zip_path}")
     zip_app(zip_path: zip_path, app_path: app_path)
@@ -82,8 +82,8 @@ platform :mac do
 
   desc "Create zip archive from built app"
   lane :zip_app do |options|
-    zip_path = options[:zip_path] || "build/Release/SentryReplayDebugger.zip"
-    app_path = options[:app_path] || "build/Release/SentryReplayDebugger.app"
+    zip_path = options[:zip_path] || "../build/Release/SentryReplayDebugger.zip"
+    app_path = options[:app_path] || "../build/Release/SentryReplayDebugger.app"
 
     unless File.directory?(app_path)
       UI.user_error!("App not found at #{app_path}. Make sure to build first.")
