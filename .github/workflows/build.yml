@@ -53,21 +53,22 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
         run: bundle exec fastlane build_release
 
-      - name: Zip app
-        run: |
-          cd build/Release
-          zip -r --symlinks "${{ github.workspace }}/SentryReplayDebugger.zip" SentryReplayDebugger.app
-
       - name: Notarize app
         if: inputs.notarize
         env:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
-        run: bundle exec fastlane notarize_app zip_path:"${{ github.workspace }}/SentryReplayDebugger.zip"
+        run: bundle exec fastlane notarize_app zip_path:"${{ github.workspace }}/build/Release/SentryReplayDebugger.zip"
+
+      - name: Zip app
+        run: |
+          if [ ! -f "build/Release/SentryReplayDebugger.zip" ]; then
+            bundle exec fastlane zip_app
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
           name: ${{ github.sha }}
-          path: SentryReplayDebugger.zip
+          path: build/Release/SentryReplayDebugger.zip
