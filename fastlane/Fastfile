@@ -39,8 +39,11 @@ platform :mac do
 
   desc "Notarize and staple app"
   lane :notarize_app do |options|
-    zip_path = options[:zip_path] || "../build/Release/SentryReplayDebugger.zip"
-    app_path = options[:app_path] || "../build/Release/SentryReplayDebugger.app"
+    zip_path = options[:zip_path] || "build/Release/SentryReplayDebugger.zip"
+    app_path = options[:app_path] || "build/Release/SentryReplayDebugger.app"
+
+    # Change to project root for clean paths
+    Dir.chdir('..')
 
     UI.message("Creating app archive: #{zip_path}")
     zip_app(zip_path: zip_path, app_path: app_path)
@@ -62,18 +65,18 @@ platform :mac do
         "--wait"
       )
 
-      UI.success("Notarization completed")
+      UI.success("Notarization completed.")
 
       # Staple the notarization ticket to the app bundle
       UI.message("Stapling notarization ticket to app bundle...")
       sh("xcrun stapler staple '#{app_path}'")
-      UI.success("Stapling completed")
+      UI.success("Stapling completed.")
 
       UI.message("Recreating zip with stapled app...")
 
       zip_app(zip_path: zip_path, app_path: app_path)
 
-      UI.success("Updated zip with stapled app")
+      UI.success("Updated zip with stapled app.")
     ensure
       # Always clean up temporary key file, even if notarization fails
       File.delete(api_key_path) if File.exist?(api_key_path)
@@ -82,8 +85,11 @@ platform :mac do
 
   desc "Create zip archive from built app"
   lane :zip_app do |options|
-    zip_path = options[:zip_path] || "../build/Release/SentryReplayDebugger.zip"
-    app_path = options[:app_path] || "../build/Release/SentryReplayDebugger.app"
+    zip_path = options[:zip_path] || "build/Release/SentryReplayDebugger.zip"
+    app_path = options[:app_path] || "build/Release/SentryReplayDebugger.app"
+
+    # Change to project root for clean paths
+    Dir.chdir('..')
 
     unless File.directory?(app_path)
       UI.user_error!("App not found at #{app_path}. Make sure to build first.")
@@ -102,7 +108,7 @@ platform :mac do
 
     sh("cd '#{app_dir}' && zip -r --symlinks '#{zip_realpath}' '#{app_name}'")
 
-    UI.success("Created #{zip_realpath}")
+    UI.success("Created #{zip_realpath}.")
   end
 
 end
