@@ -30,8 +30,7 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       # Notarize only for release branches
-      # notarize: ${{ startsWith(github.ref, 'refs/heads/release/') }}
-      notarize: true
+      notarize: ${{ startsWith(github.ref, 'refs/heads/release/') }}
     secrets:
       FASTLANE_KEYCHAIN_PASSWORD: ${{ secrets.FASTLANE_KEYCHAIN_PASSWORD }}
       MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
