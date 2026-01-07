@@ -1,0 +1,114 @@
+# Fastfile
+
+default_platform(:mac)
+
+platform :mac do
+
+  desc "Import signing certificates and provisioning profiles to keychain"
+  lane :prepare_signing do
+    setup_ci if is_ci
+
+    sync_code_signing(
+      type: "developer_id",
+      readonly: true,
+      app_identifier: [CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)],
+    )
+  end
+
+  desc "Build the release version of the app"
+  lane :build_release do
+    gym(
+      project: "SentryReplayDebugger.xcodeproj",
+      scheme: "SentryReplayDebugger",
+      configuration: "Release",
+      destination: "generic/platform=macOS",
+      skip_package_pkg: true,
+      skip_archive: true,
+      xcargs: {
+        'CODE_SIGN_STYLE' => 'Manual',
+        'CODE_SIGN_IDENTITY' => 'Developer ID Application',
+        'PRODUCT_BUNDLE_IDENTIFIER' => CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier),
+        'DEVELOPMENT_TEAM' => CredentialsManager::AppfileConfig.try_fetch_value(:team_id),
+        'PROVISIONING_PROFILE_SPECIFIER' => "match Direct #{CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)} macos",
+        'CODE_SIGN_ENTITLEMENTS' => 'SentryReplayDebugger/SentryReplayDebugger.Release.entitlements',
+        'OTHER_CODE_SIGN_FLAGS' => '--timestamp --options=runtime',
+        'SYMROOT' => File.expand_path('../build')
+      }
+    )
+  end
+
+  desc "Notarize and staple app"
+  lane :notarize_app do |options|
+    # Calculate paths from project root
+    app_path = Dir.chdir('..') do
+      File.expand_path(options[:app_path] || "build/Release/SentryReplayDebugger.app")
+    end
+
+    unless File.directory?(app_path)
+      UI.user_error!("App not found at #{app_path}. Make sure to build first.")
+    end
+
+    api_key_path = "/tmp/AuthKey.p8"
+    temp_zip = "/tmp/SentryReplayDebugger-notarization-#{Time.now.to_i}.zip"
+
+    begin
+      # Create temporary ZIP archive for notarization submission
+      UI.message("Creating temporary archive for notarization: #{temp_zip}")
+      zip_app(zip_path: temp_zip, app_path: app_path)
+
+      # Write API key to temporary file
+      File.write(api_key_path, ENV["APP_STORE_CONNECT_KEY"])
+      File.chmod(0600, api_key_path)
+
+      UI.message("Attempting to notarize: #{temp_zip}")
+
+      sh(
+        "xcrun notarytool submit #{temp_zip} " \
+        "--key #{api_key_path} " \
+        "--key-id #{ENV['APP_STORE_CONNECT_KEY_ID']} " \
+        "--issuer #{ENV['APP_STORE_CONNECT_ISSUER_ID']} " \
+        "--wait"
+      )
+
+      UI.success("Notarization completed.")
+
+      # Staple the notarization ticket to the app bundle
+      UI.message("Stapling notarization ticket to app bundle...")
+      sh("xcrun stapler staple '#{app_path}'")
+      UI.success("Stapling completed.")
+
+    ensure
+      # Always clean up temporary files, even if notarization fails
+      File.delete(api_key_path) if File.exist?(api_key_path)
+      File.delete(temp_zip) if File.exist?(temp_zip)
+    end
+  end
+
+  desc "Create zip archive from built app"
+  lane :zip_app do |options|
+    # Calculate paths from project root
+    zip_path, app_path = Dir.chdir('..') do
+      [
+        File.expand_path(options[:zip_path] || "build/Release/SentryReplayDebugger.zip"),
+        File.expand_path(options[:app_path] || "build/Release/SentryReplayDebugger.app")
+      ]
+    end
+
+    unless File.directory?(app_path)
+      UI.user_error!("App not found at #{app_path}. Make sure to build first.")
+    end
+
+    sh("rm -f '#{zip_path}'") if File.exist?(zip_path)
+
+    zip_dir = File.dirname(zip_path)
+    sh("mkdir -p '#{zip_dir}'") unless File.directory?(zip_dir)
+
+    app_dir = File.dirname(app_path)
+    app_name = File.basename(app_path)
+
+    sh("cd '#{app_dir}' && zip -r --symlinks '#{zip_path}' '#{app_name}'")
+
+    UI.success("Created #{zip_path}.")
+  end
+
+end

@@ -1,0 +1,5 @@
+changelogPolicy: auto
+preReleaseCommand: bash scripts/bump-version.sh
+targets:
+  - name: github
+  - name: registry

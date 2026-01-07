@@ -1,0 +1,7 @@
+# Appfile
+# See docs at https://docs.fastlane.tools/advanced/#appfile
+
+app_identifier("io.sentry.SentryReplayDebugger")
+
+itc_team_id("96157806") # App Store Connect Team ID
+team_id("97JCY7859U") # Developer Portal Team ID
