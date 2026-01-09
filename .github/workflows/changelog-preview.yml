@@ -1,5 +1,4 @@
 name: Changelog Preview
-secrets: inherit
 on:
   pull_request:
     types:
