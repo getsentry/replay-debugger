@@ -41,19 +41,11 @@ struct EmptyStateView: View {
                 )
 
                 VStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.secondary.opacity(0.1))
-                        .frame(height: 200)
-                        .overlay(
-                            VStack {
-                                Image(systemName: "photo")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.secondary.opacity(0.5))
-                                Text("Browser DevTools Screenshot")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        )
+                    Image("DevToolsScreenshot")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxHeight: 200)
+                        .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
