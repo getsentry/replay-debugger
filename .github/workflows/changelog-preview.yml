@@ -1,7 +1,4 @@
 name: Changelog Preview
-permissions:
-  contents: read
-  pull-requests: write
 secrets: inherit
 on:
   pull_request:
