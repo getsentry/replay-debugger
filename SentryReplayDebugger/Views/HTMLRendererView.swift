@@ -628,12 +628,6 @@ struct WebView: NSViewRepresentable {
         do {
             try html.write(to: filePath, atomically: true, encoding: .utf8)
             NSLog("✅ Debug HTML written to: \(filePath.path)")
-
-            // Only open in browser if this is a new file
-            if !fileExists {
-                NSWorkspace.shared.open(filePath)
-                NSLog("🌐 Opened debug HTML in browser")
-            }
         } catch {
             NSLog("❌ Failed to write debug HTML: \(error.localizedDescription)")
         }
