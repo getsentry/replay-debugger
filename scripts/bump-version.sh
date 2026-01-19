@@ -10,7 +10,14 @@ if [[ -z "$OLD_VERSION" || -z "$NEW_VERSION" ]]; then
     exit 1
 fi
 
-PROJECT_FILE="SentryReplayDebugger.xcodeproj/project.pbxproj"
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+PROJECT_ROOT="${SCRIPT_DIR}/.."
+PROJECT_FILE="${PROJECT_ROOT}/SentryReplayDebugger.xcodeproj/project.pbxproj"
+
+if [[ ! -f "$PROJECT_FILE" ]]; then
+    echo "Error: Project file not found at $PROJECT_FILE" >&2
+    exit 1
+fi
 
 # Update MARKETING_VERSION and CURRENT_PROJECT_VERSION in project file
 sed -i '' -e "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $NEW_VERSION/g" \
