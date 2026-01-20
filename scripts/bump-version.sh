@@ -20,8 +20,10 @@ if [[ ! -f "$PROJECT_FILE" ]]; then
 fi
 
 # Update MARKETING_VERSION and CURRENT_PROJECT_VERSION in project file
-sed -i '' -e "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $NEW_VERSION/g" \
-          -e "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = $NEW_VERSION/g" \
-          "$PROJECT_FILE"
+TEMP_FILE=$(mktemp)
+sed -e "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $NEW_VERSION/g" \
+    -e "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = $NEW_VERSION/g" \
+    "$PROJECT_FILE" > "$TEMP_FILE"
+mv "$TEMP_FILE" "$PROJECT_FILE"
 
 echo "Updated version from $OLD_VERSION to $NEW_VERSION"
