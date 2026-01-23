@@ -5,11 +5,11 @@ permissions:
 on:
   pull_request_target:
     types:
-    - opened
-    - synchronize
-    - reopened
-    - edited
-    - labeled
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - labeled
 jobs:
   changelog-preview:
     uses: getsentry/craft/.github/workflows/changelog-preview.yml@v2
