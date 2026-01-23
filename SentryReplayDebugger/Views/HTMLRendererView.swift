@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import WebKit
 
@@ -13,6 +14,7 @@ struct HTMLRenderPanel: View {
     let panelId: String = UUID().uuidString
     @Binding var showSource: Bool
     @Binding var sourceSearchQuery: String
+    @State private var currentHTML: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -21,6 +23,13 @@ struct HTMLRenderPanel: View {
                     .font(.headline)
 
                 Spacer()
+
+                Button(action: saveHTMLToFile) {
+                    Image(systemName: "square.and.arrow.down")
+                }
+                .buttonStyle(.borderless)
+                .help("Save as HTML")
+                .disabled(currentHTML == nil)
 
                 Picker("", selection: $showSource) {
                     Text("Rendered").tag(false)
@@ -45,8 +54,30 @@ struct HTMLRenderPanel: View {
                 showSource: $showSource,
                 sourceSearchQuery: $sourceSearchQuery,
                 highlightedNodeId: $highlightedNodeId,
-                onHighlightError: onHighlightError
+                onHighlightError: onHighlightError,
+                currentHTML: $currentHTML
             )
+        }
+    }
+
+    private func saveHTMLToFile() {
+        guard let html = currentHTML else { return }
+
+        let savePanel = NSSavePanel()
+        savePanel.allowedContentTypes = [.html]
+        savePanel.nameFieldStringValue = "replay.html"
+        savePanel.title = "Save Rendered HTML"
+        savePanel.message = "Choose a location to save the HTML file"
+
+        savePanel.begin { response in
+            if response == .OK, let url = savePanel.url {
+                do {
+                    try html.write(to: url, atomically: true, encoding: .utf8)
+                    NSLog("✅ HTML saved to: \(url.path)")
+                } catch {
+                    NSLog("❌ Failed to save HTML: \(error.localizedDescription)")
+                }
+            }
         }
     }
 }
@@ -63,6 +94,7 @@ struct HTMLRendererView: View {
     @Binding var sourceSearchQuery: String
     @Binding var highlightedNodeId: Int?
     let onHighlightError: (String) -> Void
+    @Binding var currentHTML: String?
     @State private var renderState: RRWebEventProcessor.RenderState = RRWebEventProcessor.RenderState()
     @State private var error: String?
     @State private var lastProcessedIndex: Int? = nil
@@ -131,6 +163,9 @@ struct HTMLRendererView: View {
             // Clear highlight when navigating to a different event
             clearHighlight()
             highlightedNodeId = nil
+        }
+        .onChange(of: renderState.html) {
+            currentHTML = renderState.html
         }
     }
 
