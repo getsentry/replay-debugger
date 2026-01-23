@@ -101,7 +101,7 @@ struct ContentView: View {
     @State private var enabledEventTypes: Set<String> = ["DomContentLoaded", "Load", "FullSnapshot", "IncrementalSnapshot", "Meta", "Custom", "Plugin"]
     @State private var enabledIncrementalSources: Set<Int> = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     @State private var enabledCustomTags: Set<String> = []
-    @State private var selectedSegment: ReplaySegment?
+    @State private var selectedSegmentIDs: Set<String> = []
     @State private var selectedEvent: ReplayEvent?
     @State private var useSortedOrder = true
     @State private var timestampFilterOperator: String = ">"
@@ -157,6 +157,15 @@ struct ContentView: View {
     // Performance: Cache displayedSegment lookup
     @State private var cachedDisplayedSegment: ReplaySegment? = nil
     @State private var cachedDisplayedSegmentId: String? = nil
+
+    private var selectedSegments: [ReplaySegment] {
+        filteredSegments.filter { selectedSegmentIDs.contains($0.id) }
+    }
+
+    private var primarySelectedSegment: ReplaySegment? {
+        guard let firstID = selectedSegmentIDs.sorted().first else { return nil }
+        return filteredSegments.first { $0.id == firstID }
+    }
 
     func setTimestampFilter(_ timestamp: Date) {
         timestampFilterValue = String(format: "%.3f", timestamp.timeIntervalSince1970)
@@ -522,8 +531,10 @@ struct ContentView: View {
             // Recompute event counts when segments change
             computeEventCounts()
 
-            if !segments.isEmpty && selectedSegment == nil {
-                selectedSegment = filteredSegments.first
+            if !segments.isEmpty && selectedSegmentIDs.isEmpty {
+                if let first = filteredSegments.first {
+                    selectedSegmentIDs = [first.id]
+                }
                 selectedEvent = displayedSegment?.events(useSortedOrder: useSortedOrder).first
             }
         }
@@ -552,7 +563,7 @@ struct ContentView: View {
             updateDisplayedSegmentCache()
             updateSelectedSegmentAfterFilter()
         }
-        .onChange(of: selectedSegment) {
+        .onChange(of: selectedSegmentIDs) {
             updateDisplayedSegmentCache()
         }
         .onChange(of: globalSearchQuery) {
@@ -644,7 +655,7 @@ struct ContentView: View {
                     .navigationSubtitle("0 segments")
             } else {
                 ScrollViewReader { proxy in
-                    List(selection: $selectedSegment) {
+                    List(selection: $selectedSegmentIDs) {
                         ForEach(Array(filteredSegments.enumerated()), id: \.element.id) { index, segment in
                             segmentRowWithDivider(segment: segment, index: index)
                                 .id(segment.id)
@@ -652,8 +663,8 @@ struct ContentView: View {
                     }
                     .listStyle(.sidebar)
                     .environment(\.controlActiveState, .key)
-                    .onChange(of: selectedSegment) {
-                        if let segment = selectedSegment {
+                    .onChange(of: selectedSegmentIDs) {
+                        if let segment = primarySelectedSegment {
                             selectedEvent = segment.events(useSortedOrder: useSortedOrder).first
                             // Only scroll if this selection is from search
                             if shouldScrollToSelection {
@@ -682,14 +693,39 @@ struct ContentView: View {
     private func segmentRowWithDivider(segment: ReplaySegment, index: Int) -> some View {
         SegmentRowView(
             segment: segment,
-            isSelected: selectedSegment?.id == segment.id,
+            isSelected: selectedSegmentIDs.contains(segment.id),
             originalSegment: segments.first(where: { $0.id == segment.id }),
             previousSegment: index > 0 ? segments[index - 1] : nil,
             onTimestampClick: { timestamp in
                 setTimestampFilter(timestamp)
+            },
+            selectedCount: selectedSegmentIDs.contains(segment.id) ? selectedSegmentIDs.count : 1,
+            onExport: { preserveSegments in
+                if selectedSegmentIDs.contains(segment.id) {
+                    exportSegments(selectedSegments, preserveSegments: preserveSegments)
+                } else {
+                    exportSegments([segment], preserveSegments: false)
+                }
+            },
+            onCopyToClipboard: { preserveSegments in
+                if selectedSegmentIDs.contains(segment.id) {
+                    copySegmentsToClipboard(selectedSegments, preserveSegments: preserveSegments)
+                } else {
+                    copySegmentsToClipboard([segment], preserveSegments: false)
+                }
             }
         )
-        .tag(segment)
+        .tag(segment.id)
+    }
+
+    private func exportSegments(_ segments: [ReplaySegment], preserveSegments: Bool) {
+        guard !segments.isEmpty else { return }
+        SegmentExporter.exportToFile(segments, preserveSegments: preserveSegments)
+    }
+
+    private func copySegmentsToClipboard(_ segments: [ReplaySegment], preserveSegments: Bool) {
+        guard !segments.isEmpty else { return }
+        SegmentExporter.copyToClipboard(segments, preserveSegments: preserveSegments)
     }
 
     private var eventsListContent: some View {
@@ -897,12 +933,12 @@ struct ContentView: View {
     /// Note: Uses sortedEvents to match the allEvents array used by HTML renderer
     private var selectedEventGlobalIndex: Int? {
         guard let selectedEvent = selectedEvent,
-              let selectedSegment = selectedSegment else {
+              let primarySegment = primarySelectedSegment else {
             return nil
         }
 
         // Find the original segment index by matching segment ID
-        guard let originalSegmentIndex = segments.firstIndex(where: { $0.id == selectedSegment.id }) else {
+        guard let originalSegmentIndex = segments.firstIndex(where: { $0.id == primarySegment.id }) else {
             return nil
         }
 
@@ -1265,7 +1301,7 @@ struct ContentView: View {
     }
 
     private func updateSelectedSegmentAfterFilter() {
-        guard let currentSegment = selectedSegment else { return }
+        guard !selectedSegmentIDs.isEmpty else { return }
 
         if let displayedSegment = displayedSegment {
             selectedEvent = displayedSegment.events(useSortedOrder: useSortedOrder).first
@@ -1406,7 +1442,7 @@ struct ContentView: View {
         // Find and select the segment
         if let segment = segments.first(where: { $0.id == match.segmentId }) {
             shouldScrollToSelection = true
-            selectedSegment = segment
+            selectedSegmentIDs = [segment.id]
 
             // Find and select the event
             let events = segment.events(useSortedOrder: useSortedOrder)
@@ -1439,28 +1475,32 @@ struct ContentView: View {
     }
 
     private func selectNextSegment() {
-        guard let currentSegment = selectedSegment else {
+        guard let currentSegment = primarySelectedSegment else {
             // If no segment selected, select first
-            selectedSegment = filteredSegments.first
+            if let first = filteredSegments.first {
+                selectedSegmentIDs = [first.id]
+            }
             return
         }
 
         if let currentIndex = filteredSegments.firstIndex(where: { $0.id == currentSegment.id }),
            currentIndex + 1 < filteredSegments.count {
-            selectedSegment = filteredSegments[currentIndex + 1]
+            selectedSegmentIDs = [filteredSegments[currentIndex + 1].id]
         }
     }
 
     private func selectPreviousSegment() {
-        guard let currentSegment = selectedSegment else {
+        guard let currentSegment = primarySelectedSegment else {
             // If no segment selected, select last
-            selectedSegment = filteredSegments.last
+            if let last = filteredSegments.last {
+                selectedSegmentIDs = [last.id]
+            }
             return
         }
 
         if let currentIndex = filteredSegments.firstIndex(where: { $0.id == currentSegment.id }),
            currentIndex > 0 {
-            selectedSegment = filteredSegments[currentIndex - 1]
+            selectedSegmentIDs = [filteredSegments[currentIndex - 1].id]
         }
     }
 
@@ -1827,12 +1867,12 @@ struct ContentView: View {
     }
     
     private var currentDisplayedSegmentCacheKey: String? {
-        guard let selectedSegment = selectedSegment else { return nil }
-        return "\(selectedSegment.id)-\(currentFilterCacheKey)"
+        guard let primarySegment = primarySelectedSegment else { return nil }
+        return "\(primarySegment.id)-\(currentFilterCacheKey)"
     }
 
     private var displayedSegment: ReplaySegment? {
-        guard let selectedSegment = selectedSegment else {
+        guard let primarySegment = primarySelectedSegment else {
             return nil
         }
 
@@ -1843,7 +1883,7 @@ struct ContentView: View {
         }
 
         // Lookup segment in filtered list
-        return filteredSegments.first(where: { $0.id == selectedSegment.id })
+        return filteredSegments.first(where: { $0.id == primarySegment.id })
     }
 
     private func updateDisplayedSegmentCache() {

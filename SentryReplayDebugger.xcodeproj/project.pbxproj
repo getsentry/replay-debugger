@@ -27,6 +27,7 @@
 		A1234567890ABCDEF038 /* SegmentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF039 /* SegmentListView.swift */; };
 		A1234567890ABCDEF040 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF041 /* Config.swift */; };
 		A1234567890ABCDEF042 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF043 /* EmptyStateView.swift */; };
+		A1234567890ABCDEF044 /* SegmentExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF045 /* SegmentExporter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +74,7 @@
 		A1234567890ABCDEF041 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF043 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		C516FA0458D3442284511A93 /* DOMNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMNode.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF045 /* SegmentExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentExporter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -183,6 +185,7 @@
 				28651E442E91A9BF0087E7DD /* HTMLBeautifier.swift */,
 				28651E422E91A7290087E7DD /* RRWebHTMLConverter.swift */,
 				5FFACDF4DE5646BEAC5276DE /* RRWebEventProcessor.swift */,
+				A1234567890ABCDEF045 /* SegmentExporter.swift */,
 				A1234567890ABCDEF035 /* SentryURLParser.swift */,
 			);
 			path = Utilities;
@@ -373,6 +376,7 @@
 				A1234567890ABCDEF038 /* SegmentListView.swift in Sources */,
 				A1234567890ABCDEF040 /* Config.swift in Sources */,
 				A1234567890ABCDEF042 /* EmptyStateView.swift in Sources */,
+				A1234567890ABCDEF044 /* SegmentExporter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -620,7 +624,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SentryReplayDebugger/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -655,7 +659,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SentryReplayDebugger/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
