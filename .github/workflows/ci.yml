@@ -1,4 +1,4 @@
-name: ⚙️ CI
+name: CI
 
 on:
   push:
@@ -22,11 +22,11 @@ permissions:
 
 jobs:
   test:
-    name: 🧪 Test
+    name: Test
     uses: ./.github/workflows/test.yml
 
   build:
-    name: 🛠️ Build
+    name: Build
     uses: ./.github/workflows/build.yml
     with:
       # Notarize only for release branches
