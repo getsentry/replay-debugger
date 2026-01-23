@@ -318,6 +318,9 @@ struct SegmentRowView: View {
     let originalSegment: ReplaySegment?
     let previousSegment: ReplaySegment?
     var onTimestampClick: ((Date) -> Void)? = nil
+    var selectedCount: Int = 1
+    var onExport: ((_ preserveSegments: Bool) -> Void)? = nil
+    var onCopyToClipboard: ((_ preserveSegments: Bool) -> Void)? = nil
 
     private var segmentDuration: String? {
         // OPTIMIZATION: Store sortedEvents in local variable to avoid repeated property access
@@ -470,6 +473,29 @@ struct SegmentRowView: View {
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
+        .contextMenu {
+            Button(action: { onExport?(false) }) {
+                Label("Export as JSON...", systemImage: "square.and.arrow.up")
+            }
+
+            if selectedCount > 1 {
+                Button(action: { onExport?(true) }) {
+                    Label("Export with Segments...", systemImage: "square.and.arrow.up")
+                }
+            }
+
+            Divider()
+
+            Button(action: { onCopyToClipboard?(false) }) {
+                Label("Copy to Clipboard", systemImage: "doc.on.clipboard")
+            }
+
+            if selectedCount > 1 {
+                Button(action: { onCopyToClipboard?(true) }) {
+                    Label("Copy with Segments", systemImage: "doc.on.clipboard")
+                }
+            }
+        }
     }
 }
 
