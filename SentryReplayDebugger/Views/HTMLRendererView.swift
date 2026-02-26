@@ -96,6 +96,7 @@ struct HTMLRendererView: View {
     let onHighlightError: (String) -> Void
     @Binding var currentHTML: String?
     @State private var renderState: RRWebEventProcessor.RenderState = RRWebEventProcessor.RenderState()
+    @State private var renderedHTML: String? = nil
     @State private var error: String?
     @State private var lastProcessedIndex: Int? = nil
     @State private var isProcessing: Bool = false
@@ -120,7 +121,7 @@ struct HTMLRendererView: View {
                         .padding(.horizontal)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if renderState.html == nil || isLoadingNewRender {
+            } else if renderedHTML == nil || isLoadingNewRender {
                 VStack {
                     ProgressView()
                     Text("Processing events...")
@@ -129,7 +130,7 @@ struct HTMLRendererView: View {
                         .padding(.top, 8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let html = renderState.html {
+            } else if let html = renderedHTML {
                 if showSource {
                     HTMLSourceView(html: html, searchQuery: $sourceSearchQuery)
                         .accessibilityIdentifier("html-source-view")
@@ -153,6 +154,8 @@ struct HTMLRendererView: View {
             // Events array changed (e.g., data reloaded), reset state
             lastProcessedIndex = nil
             renderState = RRWebEventProcessor.RenderState()
+            renderedHTML = nil
+            currentHTML = nil
         }
         .onChange(of: highlightedNodeId) { newId in
             if let nodeId = newId {
@@ -164,9 +167,14 @@ struct HTMLRendererView: View {
             clearHighlight()
             highlightedNodeId = nil
         }
-        .onChange(of: renderState.html) {
-            currentHTML = renderState.html
-        }
+    }
+
+    private func applyRenderState(_ state: RRWebEventProcessor.RenderState, atIndex index: Int) {
+        renderState = state
+        let html = state.html
+        renderedHTML = html
+        currentHTML = html
+        lastProcessedIndex = index
     }
 
     private func processEvents(targetIndex: Int) async {
@@ -177,7 +185,7 @@ struct HTMLRendererView: View {
         }
 
         // Skip if we're already at the correct state
-        if lastProcessedIndex == targetIndex, renderState.html != nil, error == nil {
+        if lastProcessedIndex == targetIndex, renderedHTML != nil, error == nil {
             NSLog("✓ [\(panelId.prefix(8))] Already processed targetIndex: \(targetIndex), skipping")
             return
         }
@@ -218,8 +226,7 @@ struct HTMLRendererView: View {
             if checkpointIndex == targetIndex {
                 // Exact cache hit - must copy to avoid mutating cache
                 NSLog("🎯 [\(panelId.prefix(8))] Cache hit at \(targetIndex)")
-                renderState = cachedState.copy()
-                lastProcessedIndex = targetIndex
+                applyRenderState(cachedState.copy(), atIndex: targetIndex)
                 return
             } else {
                 // Incremental from checkpoint
@@ -234,10 +241,9 @@ struct HTMLRendererView: View {
                     fsIndex: fsIndex
                 )
 
-                if state.html != nil {
+                if state.domTree != nil {
                     NSLog("✅ [\(panelId.prefix(8))] Incremental from checkpoint success")
-                    renderState = state
-                    lastProcessedIndex = targetIndex
+                    applyRenderState(state, atIndex: targetIndex)
                     return
                 }
                 // Fall through to next strategy if failed
@@ -256,10 +262,9 @@ struct HTMLRendererView: View {
                 fsIndex: fsIndex
             )
 
-            if state.html != nil {
+            if state.domTree != nil {
                 NSLog("✅ [\(panelId.prefix(8))] Incremental render success")
-                renderState = state
-                lastProcessedIndex = targetIndex
+                applyRenderState(state, atIndex: targetIndex)
                 return
             }
             // Fall through to FullSnapshot if failed
@@ -281,13 +286,12 @@ struct HTMLRendererView: View {
         // Process with checkpoint saving at interval boundaries
         let state = processWithCheckpoints(upToIndex: targetIndex, startFromIndex: startIndex, metaIndex: metaIndex)
 
-        if state.html == nil {
+        if state.domTree == nil {
             error = "No HTML generated. Make sure there's a FullSnapshot event before the selected event."
             NSLog("❌ [\(panelId.prefix(8))] Full render failed")
         } else {
-            NSLog("✅ [\(panelId.prefix(8))] Full render success, HTML length: \(state.html?.count ?? 0)")
-            renderState = state
-            lastProcessedIndex = targetIndex
+            applyRenderState(state, atIndex: targetIndex)
+            NSLog("✅ [\(panelId.prefix(8))] Full render success, HTML length: \(renderedHTML?.count ?? 0)")
         }
     }
 
@@ -350,7 +354,7 @@ struct HTMLRendererView: View {
         var currentState = RRWebEventProcessor.processEvents(events, upToIndex: firstBoundaryIndex, startFromIndex: startIndex, metaIndex: metaIndex)
         var currentIndex = firstBoundaryIndex
 
-        if currentState.html != nil && renderStateCache[firstBoundaryIndex] == nil {
+        if currentState.domTree != nil && renderStateCache[firstBoundaryIndex] == nil {
             NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(firstBoundaryIndex) (\(cacheInterval) events from FS at \(startIndex))")
             renderStateCache[firstBoundaryIndex] = currentState.copy()
         }
@@ -369,7 +373,7 @@ struct HTMLRendererView: View {
                     startingState: currentState
                 )
 
-                if currentState.html != nil && renderStateCache[boundaryIndex] == nil {
+                if currentState.domTree != nil && renderStateCache[boundaryIndex] == nil {
                     NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(boundaryIndex) (\(eventsAtBoundary) events from FS at \(startIndex))")
                     renderStateCache[boundaryIndex] = currentState.copy()
                 }
@@ -430,7 +434,7 @@ struct HTMLRendererView: View {
             )
 
             // Save checkpoint at this boundary
-            if currentState.html != nil && renderStateCache[nextBoundaryIndex] == nil {
+            if currentState.domTree != nil && renderStateCache[nextBoundaryIndex] == nil {
                 let eventsFromFS = nextBoundaryIndex - fsIndex
                 NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(nextBoundaryIndex) (\(eventsFromFS) events from FS at \(fsIndex))")
                 renderStateCache[nextBoundaryIndex] = currentState.copy()
