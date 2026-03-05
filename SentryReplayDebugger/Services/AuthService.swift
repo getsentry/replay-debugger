@@ -199,20 +199,21 @@ class AuthService: ObservableObject {
         return try JSONDecoder().decode(OAuthTokenResponse.self, from: data)
     }
 
-    // MARK: - Token Refresh
+    // MARK: - Token Expiry & Refresh
 
-    func refreshTokenIfNeeded() async -> Bool {
-        guard let refreshToken = KeychainHelper.loadString(key: Self.refreshTokenKey) else {
+    private nonisolated func isTokenExpired() -> Bool {
+        guard let expiryString = KeychainHelper.loadString(key: Self.tokenExpiryKey),
+              let expiryInterval = Double(expiryString) else {
+            // No expiry stored — assume valid (server may not have sent expires_in)
             return false
         }
+        let expiry = Date(timeIntervalSince1970: expiryInterval)
+        return expiry.timeIntervalSinceNow <= 60
+    }
 
-        if let expiryData = KeychainHelper.load(key: Self.tokenExpiryKey),
-           let expiryString = String(data: expiryData, encoding: .utf8),
-           let expiryInterval = Double(expiryString) {
-            let expiry = Date(timeIntervalSince1970: expiryInterval)
-            if expiry.timeIntervalSinceNow > 60 {
-                return true
-            }
+    private func refreshToken() async -> Bool {
+        guard let refreshToken = KeychainHelper.loadString(key: Self.refreshTokenKey) else {
+            return false
         }
 
         do {
@@ -221,9 +222,7 @@ class AuthService: ObservableObject {
             return true
         } catch {
             NSLog("⚠️ Token refresh failed: \(error.localizedDescription)")
-            await MainActor.run {
-                isAuthenticated = false
-            }
+            isAuthenticated = false
             return false
         }
     }
@@ -272,9 +271,17 @@ class AuthService: ObservableObject {
     }
 
     func validAccessToken() async -> String? {
-        let refreshed = await refreshTokenIfNeeded()
-        guard refreshed else { return nil }
-        return loadAccessToken()
+        // If we have a token and it's not expired, return it directly
+        if let token = loadAccessToken(), !isTokenExpired() {
+            return token
+        }
+
+        // Token is missing or expired — try to refresh
+        if await refreshToken() {
+            return loadAccessToken()
+        }
+
+        return nil
     }
 
     func handleUnauthorized() {
