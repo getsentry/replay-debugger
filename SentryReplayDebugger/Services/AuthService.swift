@@ -57,6 +57,7 @@ class AuthService: ObservableObject {
 
     private var codeVerifier: String?
     private var webAuthSession: ASWebAuthenticationSession?
+    private var presentationContextProvider: WindowPresentationContextProvider?
 
     private init() {
         isAuthenticated = loadAccessToken() != nil
@@ -132,7 +133,9 @@ class AuthService: ObservableObject {
             }
         }
 
-        session.presentationContextProvider = WindowPresentationContextProvider(anchor: anchor)
+        let contextProvider = WindowPresentationContextProvider(anchor: anchor)
+        self.presentationContextProvider = contextProvider
+        session.presentationContextProvider = contextProvider
         session.prefersEphemeralWebBrowserSession = false
         self.webAuthSession = session
         session.start()
@@ -266,6 +269,16 @@ class AuthService: ObservableObject {
 
     nonisolated func loadAccessToken() -> String? {
         return KeychainHelper.loadString(key: Self.accessTokenKey)
+    }
+
+    func validAccessToken() async -> String? {
+        let refreshed = await refreshTokenIfNeeded()
+        guard refreshed else { return nil }
+        return loadAccessToken()
+    }
+
+    func handleUnauthorized() {
+        isAuthenticated = false
     }
 
     // MARK: - Logout

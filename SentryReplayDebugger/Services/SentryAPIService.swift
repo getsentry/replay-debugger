@@ -21,7 +21,7 @@ class SentryAPIService: ObservableObject {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        if let authToken = getAuthToken() {
+        if let authToken = await getAuthToken() {
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         }
         
@@ -29,6 +29,11 @@ class SentryAPIService: ObservableObject {
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+        
+        if httpResponse.statusCode == 401 {
+            await AuthService.shared.handleUnauthorized()
+            throw APIError.httpError(401)
         }
         
         guard httpResponse.statusCode == 200 else {
@@ -47,8 +52,8 @@ class SentryAPIService: ObservableObject {
         }
     }
     
-    private func getAuthToken() -> String? {
-        return AuthService.shared.loadAccessToken()
+    private func getAuthToken() async -> String? {
+        return await AuthService.shared.validAccessToken()
     }
     
     private func parseSegmentsFromJSON(_ jsonArray: [[String: Any]]) -> [ReplaySegment] {
