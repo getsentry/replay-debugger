@@ -29,6 +29,7 @@ DerivedData/
 *.ipa
 *.dSYM.zip
 *.dSYM
+dist
 
 ## Playgrounds
 timeline.xctimeline
@@ -117,9 +118,9 @@ Temporary Items
 .apdisk
 
 # Debug files
-billy.json
 segment*.json
 sentry-replay-debug.html
 
 # Configuration files with secrets
 Config.xcconfig
+.env
