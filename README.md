@@ -21,23 +21,19 @@ A macOS application for debugging and inspecting Sentry Session Replay data. Vie
 
 ### Sentry Error Tracking
 
-The app uses Sentry for error tracking. To configure:
+The app uses Sentry for error tracking. The DSN is injected at build time and does not need to be committed to the repository.
 
-1. Get your Sentry DSN from your Sentry project settings:
-   - Go to https://sentry.io/settings/YOUR_ORG/projects/YOUR_PROJECT/keys/
-   - Copy your DSN
+**For release/CI builds**, set a `SENTRY_DSN` secret in your GitHub repository settings. The build pipeline will automatically bake it into the app bundle.
 
-2. Configure the DSN in Xcode:
-   - Open the project in Xcode
-   - Go to **Product > Scheme > Edit Scheme**
-   - Select **Run** in the left sidebar
-   - Go to the **Arguments** tab
-   - Under **Environment Variables**, click the **+** button
-   - Add:
-     - Name: `SENTRY_DSN`
-     - Value: `your-actual-sentry-dsn-here`
+**For local development**, create a `Config.xcconfig` file in the project root (it is gitignored) and add:
 
-The app will run without Sentry if the DSN is not configured (it will print a warning in the console).
+```
+SENTRY_DSN = https://YOUR_KEY@oNNN.ingest.sentry.io/YOUR_PROJECT_ID
+```
+
+You can also set `SENTRY_DSN` as an environment variable in the Xcode scheme (**Edit Scheme > Run > Arguments > Environment Variables**) and the app will pick it up as a fallback.
+
+The app will run without Sentry if no DSN is configured (it will print a warning in the console).
 
 ## Building the Project
 
@@ -239,8 +235,4 @@ SentryReplayDebugger/
 
 ## License
 
-[Add your license here]
-
-## Contributing
-
-[Add contribution guidelines here]
+This project is licensed under the [Apache License 2.0](LICENSE.md). See the [LICENSE.md](LICENSE.md) file for details.
