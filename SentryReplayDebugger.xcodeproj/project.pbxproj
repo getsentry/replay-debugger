@@ -78,6 +78,7 @@
 		A1234567890ABCDEF043 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		C516FA0458D3442284511A93 /* DOMNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMNode.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF045 /* SegmentExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentExporter.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF060 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		A1234567890ABCDEF051 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF053 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF055 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -117,6 +118,7 @@
 		A1234567890ABCDEF012 = {
 			isa = PBXGroup;
 			children = (
+				A1234567890ABCDEF060 /* Config.xcconfig */,
 				280DC5552EAC0C0900125EB1 /* SentryReplayDebugger.xctestplan */,
 				A1234567890ABCDEF013 /* SentryReplayDebugger */,
 				280DC53F2EAC064F00125EB1 /* SentryReplayDebuggerTests */,
@@ -624,6 +626,7 @@
 		};
 		A1234567890ABCDEF028 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1234567890ABCDEF060 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = ReplayDebuggerIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -657,6 +660,7 @@
 		};
 		A1234567890ABCDEF029 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A1234567890ABCDEF060 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = ReplayDebuggerIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

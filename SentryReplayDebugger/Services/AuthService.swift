@@ -1,6 +1,5 @@
 import Foundation
 import AuthenticationServices
-import CryptoKit
 
 enum AuthError: LocalizedError {
     case invalidCallbackURL
@@ -47,6 +46,7 @@ class AuthService: ObservableObject {
     @Published var errorMessage: String?
 
     private let clientId = Config.oauthClientId
+    private let clientSecret = Config.oauthClientSecret
     private let authorizeURL = Config.oauthAuthorizeURL
     private let tokenURL = Config.oauthTokenURL
     private let redirectURI = Config.oauthRedirectURI
@@ -55,7 +55,6 @@ class AuthService: ObservableObject {
     private static let refreshTokenKey = "oauth_refresh_token"
     private static let tokenExpiryKey = "oauth_token_expiry"
 
-    private var codeVerifier: String?
     private var webAuthSession: ASWebAuthenticationSession?
     private var presentationContextProvider: WindowPresentationContextProvider?
 
@@ -63,42 +62,14 @@ class AuthService: ObservableObject {
         isAuthenticated = loadAccessToken() != nil
     }
 
-    // MARK: - PKCE
-
-    private func generateCodeVerifier() -> String {
-        var bytes = [UInt8](repeating: 0, count: 32)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        return Data(bytes)
-            .base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-    }
-
-    private func generateCodeChallenge(from verifier: String) -> String {
-        let data = Data(verifier.utf8)
-        let hash = SHA256.hash(data: data)
-        return Data(hash)
-            .base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-    }
-
     // MARK: - Login
 
     func login(anchor: ASPresentationAnchor) {
-        let verifier = generateCodeVerifier()
-        self.codeVerifier = verifier
-        let challenge = generateCodeChallenge(from: verifier)
-
         var components = URLComponents(string: authorizeURL)!
         components.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
-            URLQueryItem(name: "code_challenge", value: challenge),
-            URLQueryItem(name: "code_challenge_method", value: "S256"),
         ]
 
         guard let url = components.url else {
@@ -150,15 +121,10 @@ class AuthService: ObservableObject {
             return
         }
 
-        guard let verifier = codeVerifier else {
-            errorMessage = "Missing PKCE code verifier"
-            return
-        }
-
         isLoading = true
 
         do {
-            let tokenResponse = try await exchangeCode(code, codeVerifier: verifier)
+            let tokenResponse = try await exchangeCode(code)
             saveTokens(tokenResponse)
             isAuthenticated = true
             errorMessage = nil
@@ -167,10 +133,9 @@ class AuthService: ObservableObject {
         }
 
         isLoading = false
-        codeVerifier = nil
     }
 
-    private func exchangeCode(_ code: String, codeVerifier: String) async throws -> OAuthTokenResponse {
+    private func exchangeCode(_ code: String) async throws -> OAuthTokenResponse {
         var request = URLRequest(url: URL(string: tokenURL)!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -180,13 +145,10 @@ class AuthService: ObservableObject {
             URLQueryItem(name: "grant_type", value: "authorization_code"),
             URLQueryItem(name: "code", value: code),
             URLQueryItem(name: "client_id", value: clientId),
+            URLQueryItem(name: "client_secret", value: clientSecret),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
-            URLQueryItem(name: "code_verifier", value: codeVerifier),
         ]
-        // URLComponents.percentEncodedQuery handles form encoding; also encode '+' which
-        // URLComponents leaves unencoded but is a space in x-www-form-urlencoded.
         let encoded = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") ?? ""
-
         request.httpBody = encoded.data(using: .utf8)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -205,28 +167,32 @@ class AuthService: ObservableObject {
 
     // MARK: - Token Expiry & Refresh
 
-    private nonisolated func isTokenExpired() -> Bool {
+    nonisolated func isTokenExpired(bufferSeconds: TimeInterval = 60) -> Bool {
         guard let expiryString = KeychainHelper.loadString(key: Self.tokenExpiryKey),
               let expiryInterval = Double(expiryString) else {
-            // No expiry stored — assume valid (server may not have sent expires_in)
-            return false
+            // No expiry stored — treat as expired to be safe
+            return true
         }
         let expiry = Date(timeIntervalSince1970: expiryInterval)
-        return expiry.timeIntervalSinceNow <= 60
+        return expiry.timeIntervalSinceNow <= bufferSeconds
     }
 
-    private func refreshToken() async -> Bool {
-        guard let refreshToken = KeychainHelper.loadString(key: Self.refreshTokenKey) else {
+    func refreshTokenIfNeeded() async -> Bool {
+        guard isTokenExpired() else { return false }
+        return await performTokenRefresh()
+    }
+
+    private func performTokenRefresh() async -> Bool {
+        guard let token = KeychainHelper.loadString(key: Self.refreshTokenKey) else {
             return false
         }
 
         do {
-            let tokenResponse = try await refreshAccessToken(refreshToken)
+            let tokenResponse = try await refreshAccessToken(token)
             saveTokens(tokenResponse)
             return true
         } catch {
             NSLog("⚠️ Token refresh failed: \(error.localizedDescription)")
-            isAuthenticated = false
             return false
         }
     }
@@ -241,9 +207,9 @@ class AuthService: ObservableObject {
             URLQueryItem(name: "grant_type", value: "refresh_token"),
             URLQueryItem(name: "refresh_token", value: refreshToken),
             URLQueryItem(name: "client_id", value: clientId),
+            URLQueryItem(name: "client_secret", value: clientSecret),
         ]
         let encoded = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") ?? ""
-
         request.httpBody = encoded.data(using: .utf8)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -277,21 +243,31 @@ class AuthService: ObservableObject {
     }
 
     func validAccessToken() async -> String? {
-        // If we have a token and it's not expired, return it directly
+        // Proactive: refresh before expiry
         if let token = loadAccessToken(), !isTokenExpired() {
             return token
         }
 
-        // Token is missing or expired — try to refresh
-        if await refreshToken() {
+        // Token expired or missing — try refresh
+        if await performTokenRefresh() {
             return loadAccessToken()
         }
 
         return nil
     }
 
-    func handleUnauthorized() {
+    /// Reactive 401 handler: attempt refresh and return new token, or sign out
+    func handleUnauthorizedAndRetry() async -> String? {
+        if await performTokenRefresh() {
+            return loadAccessToken()
+        }
+
+        // Refresh failed — credentials are dead
+        KeychainHelper.delete(key: Self.accessTokenKey)
+        KeychainHelper.delete(key: Self.refreshTokenKey)
+        KeychainHelper.delete(key: Self.tokenExpiryKey)
         isAuthenticated = false
+        return nil
     }
 
     // MARK: - Logout

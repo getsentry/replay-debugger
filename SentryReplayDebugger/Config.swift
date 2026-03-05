@@ -20,13 +20,21 @@ enum Config {
         return ""
     }
 
-    // MARK: - OAuth2 (PKCE)
+    // MARK: - OAuth2 (ILOC)
 
-    /// OAuth client ID from Sentry Developer Settings
-    /// Create an application at: https://sentry.io/settings/YOUR_ORG/developer-settings/
-    static let oauthClientId = "PLACEHOLDER_CLIENT_ID"
+    /// Instance-level OAuth Client credentials.
+    /// Injected at build time via OAUTH_CLIENT_ID / OAUTH_CLIENT_SECRET build settings.
+    /// For local development, set these in Config.xcconfig.
+    /// For CI, they are passed as xcargs from GH Action secrets.
+    static var oauthClientId: String {
+        Bundle.main.object(forInfoDictionaryKey: "OAUTH_CLIENT_ID") as? String ?? ""
+    }
 
-    static let oauthAuthorizeURL = "https://sentry.io/oauth/authorize/"
-    static let oauthTokenURL = "https://sentry.io/oauth/token/"
-    static let oauthRedirectURI = "sentry-replay-debugger://callback"
+    static var oauthClientSecret: String {
+        Bundle.main.object(forInfoDictionaryKey: "OAUTH_CLIENT_SECRET") as? String ?? ""
+    }
+
+    static let oauthAuthorizeURL = "https://sentry.sentry.io/oauth/authorize/"
+    static let oauthTokenURL = "https://sentry.sentry.io/oauth/token/"
+    static let oauthRedirectURI = "sentry-replay-debugger://sentry.io/callback"
 }

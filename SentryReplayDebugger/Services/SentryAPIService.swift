@@ -19,26 +19,13 @@ class SentryAPIService: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        addStandardHeaders(to: &request)
         
         if let authToken = await getAuthToken() {
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         }
         
-        let (data, response) = try await session.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-        
-        if httpResponse.statusCode == 401 {
-            await AuthService.shared.handleUnauthorized()
-            throw APIError.httpError(401)
-        }
-        
-        guard httpResponse.statusCode == 200 else {
-            throw APIError.httpError(httpResponse.statusCode)
-        }
+        let (data, httpResponse) = try await performRequest(request)
         
         do {
             guard let jsonObject = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
@@ -55,7 +42,48 @@ class SentryAPIService: ObservableObject {
     private func getAuthToken() async -> String? {
         return await AuthService.shared.validAccessToken()
     }
-    
+
+    private func addStandardHeaders(to request: inout URLRequest) {
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Accept")
+    }
+
+    /// Perform a request with reactive 401 retry: on 401, refresh the token and retry once.
+    private func performRequest(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        if httpResponse.statusCode == 401 {
+            // Reactive refresh: try to get a new token and retry once
+            if let newToken = await AuthService.shared.handleUnauthorizedAndRetry() {
+                var retryRequest = request
+                retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+
+                let (retryData, retryResponse) = try await session.data(for: retryRequest)
+                guard let retryHttpResponse = retryResponse as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+
+                guard retryHttpResponse.statusCode != 401 else {
+                    throw APIError.httpError(401)
+                }
+
+                return (retryData, retryHttpResponse)
+            }
+
+            throw APIError.httpError(401)
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw APIError.httpError(httpResponse.statusCode)
+        }
+
+        return (data, httpResponse)
+    }
+
     private func parseSegmentsFromJSON(_ jsonArray: [[String: Any]]) -> [ReplaySegment] {
         return jsonArray.compactMap { segmentData in
             guard let id = segmentData["id"] as? String ?? segmentData["segment_id"] as? String else {

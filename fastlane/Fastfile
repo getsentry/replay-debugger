@@ -34,6 +34,8 @@ platform :mac do
         'OTHER_CODE_SIGN_FLAGS' => '--timestamp --options=runtime',
         'SYMROOT' => File.expand_path('../build'),
         'SENTRY_DSN' => ENV.fetch('SENTRY_DSN', '')
+        'OAUTH_CLIENT_ID' => ENV['OAUTH_CLIENT_ID'] || '',
+        'OAUTH_CLIENT_SECRET' => ENV['OAUTH_CLIENT_SECRET'] || '',
       }
     )
   end

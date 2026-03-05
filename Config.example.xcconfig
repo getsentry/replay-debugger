@@ -3,3 +3,7 @@
 
 // Your Sentry DSN from https://sentry.io/settings/YOUR_ORG/projects/YOUR_PROJECT/keys/
 SENTRY_DSN = your-sentry-dsn-here
+
+// OAuth credentials from Sentry ILOC (Instance-level OAuth Client)
+OAUTH_CLIENT_ID = your-oauth-client-id-here
+OAUTH_CLIENT_SECRET = your-oauth-client-secret-here
