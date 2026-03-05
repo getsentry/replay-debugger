@@ -123,3 +123,4 @@ sentry-replay-debug.html
 
 # Configuration files with secrets
 Config.xcconfig
+.env
