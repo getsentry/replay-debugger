@@ -19,4 +19,14 @@ enum Config {
         print("   For local development: Edit Scheme > Run > Arguments > Environment Variables.")
         return ""
     }
+
+    // MARK: - OAuth2 (PKCE)
+
+    /// OAuth client ID from Sentry Developer Settings
+    /// Create an application at: https://sentry.io/settings/YOUR_ORG/developer-settings/
+    static let oauthClientId = "PLACEHOLDER_CLIENT_ID"
+
+    static let oauthAuthorizeURL = "https://sentry.io/oauth/authorize/"
+    static let oauthTokenURL = "https://sentry.io/oauth/token/"
+    static let oauthRedirectURI = "sentry-replay-debugger://callback"
 }

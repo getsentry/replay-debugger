@@ -94,6 +94,7 @@ struct SearchMatch: Identifiable {
 }
 
 struct ContentView: View {
+    @EnvironmentObject private var authService: AuthService
     @State private var replayURL: String = ""
     @State private var segments: [ReplaySegment] = []
     @State private var isLoading = false
@@ -444,6 +445,11 @@ struct ContentView: View {
                         .foregroundColor(hasActiveFilters ? .accentColor : nil)
                 }
                 .help("Show filter inspector")
+
+                Button(action: { authService.logout() }) {
+                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                }
+                .help("Sign out of Sentry")
             }
 
             ToolbarItem(placement: .principal) {

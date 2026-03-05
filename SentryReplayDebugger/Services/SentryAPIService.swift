@@ -48,7 +48,7 @@ class SentryAPIService: ObservableObject {
     }
     
     private func getAuthToken() -> String? {
-        return UserDefaults.standard.string(forKey: "SentryAuthToken")
+        return AuthService.shared.loadAccessToken()
     }
     
     private func parseSegmentsFromJSON(_ jsonArray: [[String: Any]]) -> [ReplaySegment] {
