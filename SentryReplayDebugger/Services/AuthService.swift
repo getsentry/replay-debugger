@@ -175,15 +175,19 @@ class AuthService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        let params = [
-            "grant_type=authorization_code",
-            "code=\(code)",
-            "client_id=\(clientId)",
-            "redirect_uri=\(redirectURI.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? redirectURI)",
-            "code_verifier=\(codeVerifier)",
-        ].joined(separator: "&")
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "grant_type", value: "authorization_code"),
+            URLQueryItem(name: "code", value: code),
+            URLQueryItem(name: "client_id", value: clientId),
+            URLQueryItem(name: "redirect_uri", value: redirectURI),
+            URLQueryItem(name: "code_verifier", value: codeVerifier),
+        ]
+        // URLComponents.percentEncodedQuery handles form encoding; also encode '+' which
+        // URLComponents leaves unencoded but is a space in x-www-form-urlencoded.
+        let encoded = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") ?? ""
 
-        request.httpBody = params.data(using: .utf8)
+        request.httpBody = encoded.data(using: .utf8)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -232,13 +236,15 @@ class AuthService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        let params = [
-            "grant_type=refresh_token",
-            "refresh_token=\(refreshToken)",
-            "client_id=\(clientId)",
-        ].joined(separator: "&")
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "grant_type", value: "refresh_token"),
+            URLQueryItem(name: "refresh_token", value: refreshToken),
+            URLQueryItem(name: "client_id", value: clientId),
+        ]
+        let encoded = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B") ?? ""
 
-        request.httpBody = params.data(using: .utf8)
+        request.httpBody = encoded.data(using: .utf8)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
