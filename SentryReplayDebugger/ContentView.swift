@@ -467,7 +467,6 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            loadDebugJSON()
             NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                 // Check if a text field has focus (to avoid interfering with text input)
                 if let firstResponder = NSApp.keyWindow?.firstResponder as? NSTextView {
@@ -1528,59 +1527,6 @@ struct ContentView: View {
         }
     }
     
-    private func loadDebugJSON() {
-        #if DEBUG
-        let debugFilePath = "billy.json"
-        let fileURL = URL(fileURLWithPath: debugFilePath)
-
-        // Check if file exists
-        guard FileManager.default.fileExists(atPath: debugFilePath) else {
-            NSLog("Debug file not found at: \(debugFilePath)")
-            return
-        }
-
-        do {
-            let jsonData = try Data(contentsOf: fileURL)
-            let jsonObject = try JSONSerialization.jsonObject(with: jsonData)
-
-            if let outerArray = jsonObject as? [Any] {
-                // Check if it's an array of arrays of events [[events...], [events...]]
-                var parsedSegments: [ReplaySegment] = []
-
-                for (index, item) in outerArray.enumerated() {
-                    if let eventsArray = item as? [[String: Any]] {
-                        let segment = createSegmentFromEvents(eventsArray, id: "segment-\(index)")
-                        parsedSegments.append(segment)
-                    }
-                }
-
-                if !parsedSegments.isEmpty {
-                    segments = parsedSegments
-                    errorMessage = nil
-                    NSLog("✅ Loaded \(parsedSegments.count) segments from debug file")
-                } else if let eventsArray = jsonObject as? [[String: Any]] {
-                    // Handle direct array of events
-                    segments = [createSegmentFromEvents(eventsArray, id: "segment-0")]
-                    errorMessage = nil
-                    NSLog("✅ Loaded 1 segment from debug file")
-                } else if let segmentsArray = jsonObject as? [[String: Any]] {
-                    // Handle array of segment objects
-                    segments = parseSegmentsFromClipboard(segmentsArray)
-                    errorMessage = nil
-                    NSLog("✅ Loaded \(segments.count) segments from debug file")
-                }
-            } else if let singleSegment = jsonObject as? [String: Any] {
-                segments = parseSegmentsFromClipboard([singleSegment])
-                errorMessage = nil
-                NSLog("✅ Loaded 1 segment from debug file")
-            } else {
-                NSLog("❌ Invalid JSON format in debug file")
-            }
-        } catch {
-            NSLog("❌ Failed to load debug file: \(error.localizedDescription)")
-        }
-        #endif
-    }
 
     private func loadFromClipboard() {
         let pasteboard = NSPasteboard.general
