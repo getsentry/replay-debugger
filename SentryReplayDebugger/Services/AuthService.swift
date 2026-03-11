@@ -70,6 +70,7 @@ class AuthService: ObservableObject {
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
+            URLQueryItem(name: "scope", value: "org:read project:read team:read event:read"),
         ]
 
         guard let url = components.url else {
