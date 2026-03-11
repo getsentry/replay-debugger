@@ -30,17 +30,33 @@ class SentryAPIService: ObservableObject {
         }
         
         let (data, httpResponse) = try await performRequest(request)
-        
-        do {
-            guard let jsonObject = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-                throw APIError.decodingError
-            }
-            
-            let segments = parseSegmentsFromJSON(jsonObject)
-            return segments.isEmpty ? createMockSegments() : segments
-        } catch {
-            return createMockSegments()
+
+        let jsonObject = try JSONSerialization.jsonObject(with: data)
+
+        // Response with download=true is [[event, ...], [event, ...], ...]
+        // Each inner array is one segment's rrweb events
+        guard let outerArray = jsonObject as? [Any] else {
+            throw APIError.decodingError
         }
+
+        var segments: [ReplaySegment] = []
+        for (index, item) in outerArray.enumerated() {
+            if let eventsArray = item as? [[String: Any]] {
+                let events = eventsArray.enumerated().map { eventIndex, eventData in
+                    let id = eventData["id"] as? String ?? "event-\(eventIndex)"
+                    let type = parseEventType(eventData["type"])
+                    let timestamp = parseTimestamp(from: eventData["timestamp"]) ?? Date()
+                    let data = eventData["data"] as? [String: Any] ?? eventData
+                    return ReplayEvent(id: id, type: type, timestamp: timestamp, data: data)
+                }
+                let timestamp = events.first?.timestamp ?? Date()
+                segments.append(ReplaySegment(id: "segment-\(index)", timestamp: timestamp, events: events))
+            }
+        }
+
+        NSLog("✅ Parsed \(segments.count) segments from API")
+        guard !segments.isEmpty else { throw APIError.decodingError }
+        return segments
     }
     
     private func getAuthToken() async -> String? {
