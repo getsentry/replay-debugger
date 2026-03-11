@@ -1,12 +1,13 @@
 {
   "color-space-for-untagged-svg-colors" : "display-p3",
   "fill" : {
-    "automatic-gradient" : "display-p3:0.33333,0.27843,0.44314,1.00000"
+    "solid" : "display-p3:0.43821,0.33237,0.96391,1.00000"
   },
   "groups" : [
     {
       "layers" : [
         {
+          "hidden" : true,
           "image-name" : "Frame 1.svg",
           "name" : "Frame 1",
           "position" : {
@@ -14,6 +15,32 @@
             "translation-in-points" : [
               12.671875,
               4.9921875
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "hidden" : false,
+      "layers" : [
+        {
+          "blend-mode" : "normal",
+          "hidden" : false,
+          "image-name" : "sentry-avatar-logo-square-gradient 1.png",
+          "name" : "sentry-avatar-logo-square-gradient 1",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -17.953125
             ]
           }
         }

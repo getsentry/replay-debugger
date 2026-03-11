@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct LoginView: View {
+    static let brandPurple = Color(.displayP3, red: 0.438, green: 0.332, blue: 0.964)
+
     @ObservedObject var authService: AuthService
 
     var body: some View {
@@ -8,18 +10,15 @@ struct LoginView: View {
             Spacer()
 
             VStack(spacing: 24) {
-                Image(systemName: "play.rectangle.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.tint)
+                Image(nsImage: NSApplication.shared.applicationIconImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 96, height: 96)
 
                 VStack(spacing: 8) {
-                    Text("Sentry Replay Debugger")
+                    Text("Replay Debugger")
                         .font(.title2)
                         .fontWeight(.semibold)
-
-                    Text("Sign in to access your replay data")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
                 }
 
                 if authService.isLoading {
@@ -27,11 +26,12 @@ struct LoginView: View {
                         .controlSize(.small)
                 } else {
                     Button(action: startLogin) {
-                        Text("Sign in with Sentry")
+                        Text("Sign in to Sentry")
                             .frame(maxWidth: 220)
                     }
                     .controlSize(.large)
                     .buttonStyle(.borderedProminent)
+                    .tint(Self.brandPurple)
                     .keyboardShortcut(.defaultAction)
                 }
 
@@ -45,12 +45,12 @@ struct LoginView: View {
             }
             .padding(40)
             .frame(width: 380)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor))
+        .toolbar(.hidden, for: .windowToolbar)
     }
 
     private func startLogin() {
@@ -59,6 +59,16 @@ struct LoginView: View {
     }
 }
 
-#Preview {
+#Preview("Login") {
     LoginView(authService: AuthService.shared)
+        .frame(width: 500, height: 450)
+}
+
+#Preview("Login - Error") {
+    LoginView(authService: {
+        let service = AuthService.shared
+        service.errorMessage = "Unable to connect to Sentry"
+        return service
+    }())
+    .frame(width: 500, height: 450)
 }
