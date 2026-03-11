@@ -9,20 +9,24 @@ struct PaginatedResponse {
 class SentryAPIService: ObservableObject {
     static let shared = SentryAPIService()
 
-    private let baseURL = "https://sentry.io/api/0"
+    private let baseURL = "https://us.sentry.io/api/0"
     private let session = URLSession.shared
 
     private init() {}
     
-    func fetchReplaySegments(orgSlug: String, replayId: String) async throws -> [ReplaySegment] {
-        let url = URL(string: "\(baseURL)/organizations/\(orgSlug)/replays/\(replayId)/recording-segments/")!
-        
+    func fetchReplaySegments(orgSlug: String, projectId: String, replayId: String) async throws -> [ReplaySegment] {
+        let url = URL(string: "\(baseURL)/projects/\(orgSlug)/\(projectId)/replays/\(replayId)/recording-segments/?download=true&per_page=100")!
+        NSLog("🌐 Fetching replay segments: \(url.absoluteString)")
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         addStandardHeaders(to: &request)
         
         if let authToken = await getAuthToken() {
+            NSLog("🔑 Using auth token: \(authToken.prefix(8))...")
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            NSLog("⚠️ No auth token available")
         }
         
         let (data, httpResponse) = try await performRequest(request)
@@ -78,6 +82,8 @@ class SentryAPIService: ObservableObject {
         }
 
         guard httpResponse.statusCode == 200 else {
+            let body = String(data: data, encoding: .utf8) ?? "<no body>"
+            NSLog("❌ HTTP \(httpResponse.statusCode): \(body)")
             throw APIError.httpError(httpResponse.statusCode)
         }
 

@@ -95,7 +95,6 @@ struct SearchMatch: Identifiable {
 
 struct ContentView: View {
     @EnvironmentObject private var authService: AuthService
-    @State private var replayURL: String = ""
     @State private var segments: [ReplaySegment] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -435,10 +434,10 @@ struct ContentView: View {
                 }
 
                 Button(action: { loadFromClipboard() }) {
-                    Label("Load JSON", systemImage: "doc.on.clipboard")
+                    Label("Paste", systemImage: "doc.on.clipboard")
                 }
                 .disabled(isLoading)
-                .help("Load replay data from clipboard (⌘V)")
+                .help("Load replay from clipboard: Sentry URL, cURL, or JSON (⌘V)")
 
                 Button(action: { showInspector.toggle() }) {
                     Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
@@ -452,20 +451,6 @@ struct ContentView: View {
                 .help("Sign out of Sentry")
             }
 
-            ToolbarItem(placement: .principal) {
-                HStack(spacing: 8) {
-                    TextField("Enter Sentry replay URL...", text: $replayURL)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 300)
-
-                    Button(action: { fetchReplayData() }) {
-                        Label("Fetch", systemImage: "arrow.down.circle")
-                    }
-                    .keyboardShortcut("r", modifiers: [.command])
-                    .disabled(replayURL.isEmpty || isLoading)
-                    .help("Fetch replay from Sentry (⌘R)")
-                }
-            }
         }
         .inspector(isPresented: $showInspector) {
             inspectorContent
@@ -1510,9 +1495,12 @@ struct ContentView: View {
         }
     }
 
-    private func fetchReplayData() {
-        guard let urlComponents = SentryURLParser.parse(url: replayURL) else {
-            errorMessage = "Invalid Sentry replay URL format"
+    private func fetchReplayFromURL(_ url: String) {
+        let urlComponents: SentryURLComponents
+        do {
+            urlComponents = try SentryURLParser.parse(url: url)
+        } catch {
+            errorMessage = "Invalid Sentry replay URL: \(error.localizedDescription)"
             return
         }
         
@@ -1523,6 +1511,7 @@ struct ContentView: View {
             do {
                 let fetchedSegments = try await SentryAPIService.shared.fetchReplaySegments(
                     orgSlug: urlComponents.orgSlug,
+                    projectId: urlComponents.projectId,
                     replayId: urlComponents.replayId
                 )
                 
@@ -1600,8 +1589,15 @@ struct ContentView: View {
             return
         }
 
-        // Check if clipboard contains a CURL command
         let trimmedText = clipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Check if clipboard contains a Sentry replay URL
+        if SentryURLParser.canParse(url: trimmedText) {
+            fetchReplayFromURL(trimmedText)
+            return
+        }
+
+        // Check if clipboard contains a cURL command
         if trimmedText.lowercased().hasPrefix("curl") {
             loadFromCURLCommand(trimmedText)
             return
