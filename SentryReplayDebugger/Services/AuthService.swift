@@ -179,16 +179,11 @@ class AuthService: ObservableObject {
     func isTokenExpired(bufferSeconds: TimeInterval = 60) -> Bool {
         guard let expiryString = KeychainHelper.loadString(key: Self.tokenExpiryKey),
               let expiryInterval = Double(expiryString) else {
-            // No expiry stored — treat as expired to be safe
-            return true
+            // No expiry stored — assume valid (server may not send expires_in)
+            return false
         }
         let expiry = Date(timeIntervalSince1970: expiryInterval)
         return expiry.timeIntervalSinceNow <= bufferSeconds
-    }
-
-    func refreshTokenIfNeeded() async -> Bool {
-        guard isTokenExpired() else { return false }
-        return await performTokenRefresh()
     }
 
     private func performTokenRefresh() async -> Bool {

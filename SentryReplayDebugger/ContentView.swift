@@ -1645,10 +1645,17 @@ struct ContentView: View {
         let trimmedText = clipboardText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Check if clipboard contains a Sentry replay URL
-        if SentryURLParser.canParse(url: trimmedText) {
+        do {
+            let _ = try SentryURLParser.parse(url: trimmedText)
             fetchReplayFromURL(trimmedText)
             return
-        }
+        } catch let error as SentryURLParseError {
+            // Recognized as a Sentry URL but missing required parts
+            if error != .unrecognizedFormat && error != .invalidURL {
+                errorMessage = error.localizedDescription
+                return
+            }
+        } catch {}
 
         // Check if clipboard contains a cURL command
         if trimmedText.lowercased().hasPrefix("curl") {

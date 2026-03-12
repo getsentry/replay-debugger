@@ -108,8 +108,8 @@ class SentryAPIService: ObservableObject {
                     throw APIError.invalidResponse
                 }
 
-                guard retryHttpResponse.statusCode != 401 else {
-                    throw APIError.httpError(401)
+                guard retryHttpResponse.statusCode == 200 else {
+                    throw APIError.httpError(retryHttpResponse.statusCode)
                 }
 
                 return (retryData, retryHttpResponse)
