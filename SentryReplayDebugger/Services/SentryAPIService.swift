@@ -13,7 +13,26 @@ class SentryAPIService: ObservableObject {
     private let session = URLSession.shared
 
     private init() {}
-    
+
+    func fetchUserProfile() async throws -> UserProfile {
+        let url = URL(string: "https://sentry.io/oauth/userinfo/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        addStandardHeaders(to: &request)
+
+        if let authToken = await getAuthToken() {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, httpResponse) = try await performRequest(request)
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw APIError.decodingError
+        }
+
+        return UserProfile(from: json)
+    }
+
     func fetchReplaySegments(orgSlug: String, projectId: String, replayId: String) async throws -> [ReplaySegment] {
         let url = URL(string: "\(baseURL)/projects/\(orgSlug)/\(projectId)/replays/\(replayId)/recording-segments/?download=true&per_page=100")!
         NSLog("🌐 Fetching replay segments: \(url.absoluteString)")

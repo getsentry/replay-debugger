@@ -44,6 +44,7 @@ class AuthService: ObservableObject {
     @Published var isAuthenticated = false
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var userProfile: UserProfile?
 
     private let clientId = Config.oauthClientId
     private let clientSecret = Config.oauthClientSecret
@@ -54,12 +55,18 @@ class AuthService: ObservableObject {
     private static let accessTokenKey = "oauth_access_token"
     private static let refreshTokenKey = "oauth_refresh_token"
     private static let tokenExpiryKey = "oauth_token_expiry"
+    private static let userProfileKey = "user_profile"
 
     private var webAuthSession: ASWebAuthenticationSession?
     private var presentationContextProvider: WindowPresentationContextProvider?
 
     private init() {
-        isAuthenticated = loadAccessToken() != nil
+        let hasToken = loadAccessToken() != nil
+        isAuthenticated = hasToken
+        if hasToken {
+            userProfile = Self.loadCachedProfile()
+            Task { await fetchUserProfile() }
+        }
     }
 
     // MARK: - Login
@@ -70,7 +77,7 @@ class AuthService: ObservableObject {
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
-            URLQueryItem(name: "scope", value: "org:read project:read team:read event:read"),
+            URLQueryItem(name: "scope", value: "org:read project:read team:read event:read openid profile email"),
         ]
 
         guard let url = components.url else {
@@ -129,6 +136,7 @@ class AuthService: ObservableObject {
             saveTokens(tokenResponse)
             isAuthenticated = true
             errorMessage = nil
+            await fetchUserProfile()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -271,13 +279,38 @@ class AuthService: ObservableObject {
         return nil
     }
 
+    // MARK: - User Profile
+
+    func fetchUserProfile() async {
+        do {
+            let profile = try await SentryAPIService.shared.fetchUserProfile()
+            userProfile = profile
+            Self.cacheProfile(profile)
+        } catch {
+            NSLog("⚠️ Failed to fetch user profile: \(error.localizedDescription)")
+        }
+    }
+
+    private static func cacheProfile(_ profile: UserProfile) {
+        if let data = try? JSONEncoder().encode(profile) {
+            KeychainHelper.save(key: userProfileKey, data: data)
+        }
+    }
+
+    private static func loadCachedProfile() -> UserProfile? {
+        guard let data = KeychainHelper.load(key: userProfileKey) else { return nil }
+        return try? JSONDecoder().decode(UserProfile.self, from: data)
+    }
+
     // MARK: - Logout
 
     func logout() {
         KeychainHelper.delete(key: Self.accessTokenKey)
         KeychainHelper.delete(key: Self.refreshTokenKey)
         KeychainHelper.delete(key: Self.tokenExpiryKey)
+        KeychainHelper.delete(key: Self.userProfileKey)
         isAuthenticated = false
+        userProfile = nil
         errorMessage = nil
     }
 }

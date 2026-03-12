@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 /// A split view that automatically persists its divider position
 struct PersistentVSplitView<Top: View, Bottom: View>: NSViewRepresentable {
@@ -98,8 +98,13 @@ struct ContentView: View {
     @State private var segments: [ReplaySegment] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var enabledEventTypes: Set<String> = ["DomContentLoaded", "Load", "FullSnapshot", "IncrementalSnapshot", "Meta", "Custom", "Plugin"]
-    @State private var enabledIncrementalSources: Set<Int> = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    @State private var enabledEventTypes: Set<String> = [
+        "DomContentLoaded", "Load", "FullSnapshot", "IncrementalSnapshot", "Meta", "Custom",
+        "Plugin",
+    ]
+    @State private var enabledIncrementalSources: Set<Int> = [
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+    ]
     @State private var enabledCustomTags: Set<String> = []
     @State private var selectedSegmentIDs: Set<String> = []
     @State private var selectedEvent: ReplayEvent?
@@ -170,9 +175,12 @@ struct ContentView: View {
     func setTimestampFilter(_ timestamp: Date) {
         timestampFilterValue = String(format: "%.3f", timestamp.timeIntervalSince1970)
     }
-    
+
     // Event types ordered by their enum values (0-6)
-    private let allEventTypes = ["DomContentLoaded", "Load", "FullSnapshot", "IncrementalSnapshot", "Meta", "Custom", "Plugin"]
+    private let allEventTypes = [
+        "DomContentLoaded", "Load", "FullSnapshot", "IncrementalSnapshot", "Meta", "Custom",
+        "Plugin",
+    ]
 
     // IncrementalSnapshot source types ordered by their enum values (0-16)
     private let incrementalSourceTypes: [(id: Int, name: String)] = [
@@ -192,22 +200,25 @@ struct ContentView: View {
         (13, "StyleDeclaration"),
         (14, "Selection"),
         (15, "AdoptedStyleSheet"),
-        (16, "CustomElement")
+        (16, "CustomElement"),
     ]
 
     private var hasActiveFilters: Bool {
         // Check if any event types are disabled
         let allTypesEnabled = enabledEventTypes.count == allEventTypes.count
         // Check if any incremental sources are disabled
-        let allIncrementalSourcesEnabled = enabledIncrementalSources.count == incrementalSourceTypes.count
+        let allIncrementalSourcesEnabled =
+            enabledIncrementalSources.count == incrementalSourceTypes.count
         // Check if any custom tags are disabled
-        let allCustomTagsEnabled = allCustomTags.isEmpty || enabledCustomTags.count == allCustomTags.count
+        let allCustomTagsEnabled =
+            allCustomTags.isEmpty || enabledCustomTags.count == allCustomTags.count
         // Check if timestamp filter is active
         let hasTimestampFilter = !timestampFilterValue.isEmpty
         // Check if node ID filter is active
         let hasNodeIdFilter = nodeIdFilter != nil
 
-        return !allTypesEnabled || !allIncrementalSourcesEnabled || !allCustomTagsEnabled || hasTimestampFilter || hasNodeIdFilter
+        return !allTypesEnabled || !allIncrementalSourcesEnabled || !allCustomTagsEnabled
+            || hasTimestampFilter || hasNodeIdFilter
     }
 
     private var totalSegmentsDuration: String? {
@@ -218,34 +229,37 @@ struct ContentView: View {
         }
 
         guard let firstTimestamp = allTimestamps.min(),
-              let lastTimestamp = allTimestamps.max(),
-              firstTimestamp != lastTimestamp else {
+            let lastTimestamp = allTimestamps.max(),
+            firstTimestamp != lastTimestamp
+        else {
             return nil
         }
 
         return formatDuration(lastTimestamp.timeIntervalSince(firstTimestamp))
     }
-    
+
     private var parsedTimestampFilter: TimeInterval? {
         guard !timestampFilterValue.isEmpty,
-              let value = Double(timestampFilterValue) else {
+            let value = Double(timestampFilterValue)
+        else {
             return nil
         }
-        
+
         // If value is greater than a reasonable timestamp in seconds (year 2020+),
         // assume it's in milliseconds and convert to seconds
-        if value > 1577836800000 {
+        if value > 1_577_836_800_000 {
             return value / 1000
         } else {
             return value
         }
     }
-    
+
     private var currentFilterCacheKey: String {
         "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(enabledCustomTags.sorted().joined())-\(timestampFilterOperator)-\(timestampFilterValue)-\(nodeIdFilter?.description ?? "")-\(nodeIdFilterAllReferences)"
     }
 
-    private func eventReferencesNode(_ event: ReplayEvent, nodeId: Int, allReferences: Bool) -> Bool {
+    private func eventReferencesNode(_ event: ReplayEvent, nodeId: Int, allReferences: Bool) -> Bool
+    {
         // Recursively search through the event data for any occurrence of the node ID
         func searchForNodeId(in data: Any) -> Bool {
             if let dict = data as? [String: Any] {
@@ -259,7 +273,7 @@ struct ContentView: View {
                     // Common reference field patterns: parentId, nextId, previousId, etc.
                     for (key, value) in dict {
                         let lowerKey = key.lowercased()
-                        if (lowerKey.hasSuffix("id") || lowerKey == "id") {
+                        if lowerKey.hasSuffix("id") || lowerKey == "id" {
                             if let refId = value as? Int, refId == nodeId {
                                 return true
                             }
@@ -291,7 +305,8 @@ struct ContentView: View {
         return searchForNodeId(in: event.data)
     }
 
-    private func findNodeIdPath(nodeId: Int, in data: Any, currentPath: [String] = []) -> [String]? {
+    private func findNodeIdPath(nodeId: Int, in data: Any, currentPath: [String] = []) -> [String]?
+    {
         if let dict = data as? [String: Any] {
             // Check if this object contains an "id" field matching our target
             if let id = dict["id"] as? Int, id == nodeId {
@@ -329,12 +344,16 @@ struct ContentView: View {
 
         // Early return if no filters are active
         let hasEventTypeFilters = enabledEventTypes.count < allEventTypes.count
-        let hasIncrementalSourceFilters = enabledIncrementalSources.count < incrementalSourceTypes.count
-        let hasCustomTagFilters = !allCustomTags.isEmpty && enabledCustomTags.count < allCustomTags.count
+        let hasIncrementalSourceFilters =
+            enabledIncrementalSources.count < incrementalSourceTypes.count
+        let hasCustomTagFilters =
+            !allCustomTags.isEmpty && enabledCustomTags.count < allCustomTags.count
         let hasTimestampFilter = parsedTimestampFilter != nil
         let hasNodeIdFilter = nodeIdFilter != nil
 
-        if !hasEventTypeFilters && !hasIncrementalSourceFilters && !hasCustomTagFilters && !hasTimestampFilter && !hasNodeIdFilter {
+        if !hasEventTypeFilters && !hasIncrementalSourceFilters && !hasCustomTagFilters
+            && !hasTimestampFilter && !hasNodeIdFilter
+        {
             return segments
         }
 
@@ -362,7 +381,9 @@ struct ContentView: View {
 
                 // Apply Custom tag filter if this is a Custom event
                 // Only check if some tags are disabled
-                if !allCustomTags.isEmpty && allCustomTags.count != enabledCustomTags.count && event.type == 5 {
+                if !allCustomTags.isEmpty && allCustomTags.count != enabledCustomTags.count
+                    && event.type == 5
+                {
                     if let customType = extractCustomEventType(from: event.data) {
                         if !enabledCustomTags.contains(customType) {
                             return false
@@ -386,7 +407,9 @@ struct ContentView: View {
 
                 // Apply node ID filter
                 if let nodeId = nodeIdFilter {
-                    if !eventReferencesNode(event, nodeId: nodeId, allReferences: nodeIdFilterAllReferences) {
+                    if !eventReferencesNode(
+                        event, nodeId: nodeId, allReferences: nodeIdFilterAllReferences)
+                    {
                         return false
                     }
                 }
@@ -395,7 +418,8 @@ struct ContentView: View {
             }
 
             // Keep segment even if no events match - just show empty event list
-            return ReplaySegment(id: segment.id, timestamp: segment.timestamp, events: filteredEvents)
+            return ReplaySegment(
+                id: segment.id, timestamp: segment.timestamp, events: filteredEvents)
         }
     }
 
@@ -411,53 +435,22 @@ struct ContentView: View {
             filterCacheKey = newKey
         }
     }
-    
+
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            // MARK: - Sidebar (Segments)
-            sidebarContent
-                .navigationSplitViewColumnWidth(min: 280, ideal: 380, max: 500)
-        } content: {
-            // MARK: - Content (Events List)
-            eventsListContent
-                .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 600)
-        } detail: {
-            // MARK: - Detail (HTML/JSON Viewer)
-            detailContent
-                .navigationSplitViewColumnWidth(min: 400, ideal: 600)
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .automatic) {
-                if isLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-
-                Button(action: { loadFromClipboard() }) {
-                    Label("Paste", systemImage: "doc.on.clipboard")
-                }
-                .disabled(isLoading)
-                .help("Load replay from clipboard: Sentry URL, cURL, or JSON (⌘V)")
-
-                Button(action: { showInspector.toggle() }) {
-                    Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
-                        .foregroundColor(hasActiveFilters ? .accentColor : nil)
-                }
-                .help("Show filter inspector")
-
-                Button(action: { authService.logout() }) {
-                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                }
-                .help("Sign out of Sentry")
+        Group {
+            if segments.isEmpty {
+                emptyOrLoadingView
+            } else {
+                replayView
             }
-
         }
+        .toolbar {}
         .inspector(isPresented: $showInspector) {
             inspectorContent
                 .inspectorColumnWidth(min: 290, ideal: 390, max: 520)
         }
         .alert("Element Not Found", isPresented: $showHighlightError) {
-            Button("OK") { }
+            Button("OK") {}
         } message: {
             Text(highlightErrorMessage)
         }
@@ -474,30 +467,34 @@ struct ContentView: View {
                 }
 
                 // Cmd+F for search
-                if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "f" {
+                if event.modifierFlags.contains(.command)
+                    && event.charactersIgnoringModifiers == "f"
+                {
                     showGlobalSearch = true
                     searchFieldFocused = true
                     return nil
                 }
 
                 // Cmd+V for loading from clipboard
-                if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "v" {
+                if event.modifierFlags.contains(.command)
+                    && event.charactersIgnoringModifiers == "v"
+                {
                     loadFromClipboard()
                     return nil
                 }
 
                 // Arrow key navigation (only if no text field is focused)
                 switch event.keyCode {
-                case 126: // Up arrow
+                case 126:  // Up arrow
                     selectPreviousEvent()
                     return nil
-                case 125: // Down arrow
+                case 125:  // Down arrow
                     selectNextEvent()
                     return nil
-                case 123: // Left arrow
+                case 123:  // Left arrow
                     selectPreviousSegment()
                     return nil
-                case 124: // Right arrow
+                case 124:  // Right arrow
                     selectNextSegment()
                     return nil
                 default:
@@ -637,38 +634,85 @@ struct ContentView: View {
         )
     }
 
-    private var sidebarContent: some View {
+    private var emptyOrLoadingView: some View {
         Group {
-            if segments.isEmpty {
-                EmptyStateView()
-                    .navigationTitle("Segments")
-                    .navigationSubtitle("0 segments")
+            if isLoading {
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .controlSize(.large)
+                    Text("Loading replay…")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollViewReader { proxy in
-                    List(selection: $selectedSegmentIDs) {
-                        ForEach(Array(filteredSegments.enumerated()), id: \.element.id) { index, segment in
-                            segmentRowWithDivider(segment: segment, index: index)
-                                .id(segment.id)
+                EmptyStateView()
+            }
+        }
+        .navigationTitle("Replay Debugger")
+    }
+
+    private var replayView: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            sidebarContent
+                .navigationSplitViewColumnWidth(min: 280, ideal: 380, max: 500)
+        } content: {
+            eventsListContent
+                .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 600)
+        } detail: {
+            detailContent
+                .navigationSplitViewColumnWidth(min: 400, ideal: 600)
+        }
+    }
+
+    private var sidebarContent: some View {
+        ScrollViewReader { proxy in
+            List(selection: $selectedSegmentIDs) {
+                ForEach(Array(filteredSegments.enumerated()), id: \.element.id) { index, segment in
+                    segmentRowWithDivider(segment: segment, index: index)
+                        .id(segment.id)
+                }
+            }
+            .listStyle(.sidebar)
+            .environment(\.controlActiveState, .key)
+            .onChange(of: selectedSegmentIDs) {
+                if let segment = primarySelectedSegment {
+                    selectedEvent = segment.events(useSortedOrder: useSortedOrder).first
+                    if shouldScrollToSelection {
+                        withAnimation {
+                            proxy.scrollTo(segment.id, anchor: .center)
                         }
                     }
-                    .listStyle(.sidebar)
-                    .environment(\.controlActiveState, .key)
-                    .onChange(of: selectedSegmentIDs) {
-                        if let segment = primarySelectedSegment {
-                            selectedEvent = segment.events(useSortedOrder: useSortedOrder).first
-                            // Only scroll if this selection is from search
-                            if shouldScrollToSelection {
-                                withAnimation {
-                                    proxy.scrollTo(segment.id, anchor: .center)
-                                }
-                            }
-                        }
-                    }
-                    .navigationTitle("Segments")
-                    .navigationSubtitle(segmentSubtitle)
                 }
             }
         }
+        .navigationTitle("Segments")
+        .navigationSubtitle(segmentSubtitle)
+    }
+
+    private var userProfileMenu: some View {
+        Menu {
+            if let profile = authService.userProfile {
+                Text(profile.email)
+                Divider()
+            }
+            Button(action: { authService.logout() }) {
+                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+            }
+        } label: {
+            HStack(spacing: 8) {
+                UserAvatarView(profile: authService.userProfile, size: 22)
+                if let profile = authService.userProfile {
+                    Text(profile.name)
+                        .font(.callout)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
     }
 
     private var segmentSubtitle: String {
@@ -781,6 +825,7 @@ struct ContentView: View {
                     }
                     .navigationTitle("Events")
                     .navigationSubtitle("\(events.count) events")
+
                 }
             }
         }
@@ -828,14 +873,18 @@ struct ContentView: View {
                             onFilterForNodeAllReferences: filterForNodeAllReferences,
                             highlightPath: {
                                 // Priority: search match > node filter
-                                if let searchMatch = currentSearchMatch, searchMatch.matchType == .eventData {
+                                if let searchMatch = currentSearchMatch,
+                                    searchMatch.matchType == .eventData
+                                {
                                     return searchMatch.jsonPath
                                 } else if let nodeId = nodeIdFilter {
                                     return findNodeIdPath(nodeId: nodeId, in: selectedEvent.data)
                                 }
                                 return nil
                             }(),
-                            searchQuery: currentSearchMatch?.matchType == .eventData ? globalSearchQuery : (nodeIdFilter != nil ? "\(nodeIdFilter!)" : nil)
+                            searchQuery: currentSearchMatch?.matchType == .eventData
+                                ? globalSearchQuery
+                                : (nodeIdFilter != nil ? "\(nodeIdFilter!)" : nil)
                         )
                         .id(selectedEvent.id)
                     }
@@ -876,6 +925,29 @@ struct ContentView: View {
             }
             .frame(minHeight: 100)
         }
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                userProfileMenu
+            }
+            ToolbarItemGroup(placement: .primaryAction) {
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+
+                Button(action: { loadFromClipboard() }) {
+                    Label("Paste", systemImage: "doc.on.clipboard")
+                }
+                .disabled(isLoading)
+                .help("Load replay from clipboard: Sentry URL, cURL, or JSON (⌘V)")
+
+                Button(action: { showInspector.toggle() }) {
+                    Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
+                        .foregroundColor(hasActiveFilters ? .accentColor : nil)
+                }
+                .help("Show filter inspector")
+            }
+        }
     }
 
     /// Flattened array of all events from all segments (cached for performance)
@@ -903,9 +975,9 @@ struct ContentView: View {
             // Build indices for FullSnapshot and Meta events
             for (localIndex, event) in events.enumerated() {
                 let globalIndex = cumulative + localIndex
-                if event.type == 2 { // FullSnapshot
+                if event.type == 2 {  // FullSnapshot
                     fullSnapshots.append(globalIndex)
-                } else if event.type == 4 { // Meta
+                } else if event.type == 4 {  // Meta
                     metas.append(globalIndex)
                 }
             }
@@ -923,19 +995,25 @@ struct ContentView: View {
     /// Note: Uses sortedEvents to match the allEvents array used by HTML renderer
     private var selectedEventGlobalIndex: Int? {
         guard let selectedEvent = selectedEvent,
-              let primarySegment = primarySelectedSegment else {
+            let primarySegment = primarySelectedSegment
+        else {
             return nil
         }
 
         // Find the original segment index by matching segment ID
-        guard let originalSegmentIndex = segments.firstIndex(where: { $0.id == primarySegment.id }) else {
+        guard let originalSegmentIndex = segments.firstIndex(where: { $0.id == primarySegment.id })
+        else {
             return nil
         }
 
         // Find the event's position within the sorted segment events
         // Must use sortedEvents to match allEvents which always uses sorted order
         let originalSegmentEvents = segments[originalSegmentIndex].sortedEvents
-        guard let eventIndexInSegment = originalSegmentEvents.firstIndex(where: { $0.id == selectedEvent.id && $0.timestamp == selectedEvent.timestamp }) else {
+        guard
+            let eventIndexInSegment = originalSegmentEvents.firstIndex(where: {
+                $0.id == selectedEvent.id && $0.timestamp == selectedEvent.timestamp
+            })
+        else {
             return nil
         }
 
@@ -964,30 +1042,83 @@ struct ContentView: View {
 
             Form {
                 // 1. Display Options
-            Section("Display Options") {
-                Toggle("Use Sorted Order", isOn: $useSortedOrder)
-            }
+                Section("Display Options") {
+                    Toggle("Use Sorted Order", isOn: $useSortedOrder)
+                }
 
-            // 2. Node ID Filter
-            Section("Node Filter") {
-                HStack {
+                // 2. Node ID Filter
+                Section("Node Filter") {
+                    HStack {
+                        ZStack(alignment: .trailing) {
+                            TextField("Node ID", text: $nodeIdFilterText)
+                                .textFieldStyle(.roundedBorder)
+                                .padding(.trailing, !nodeIdFilterText.isEmpty ? 24 : 0)
+                                .onSubmit {
+                                    // Only update filter when user presses Enter
+                                    if nodeIdFilterText.isEmpty {
+                                        nodeIdFilter = nil
+                                    } else if let intValue = Int(nodeIdFilterText) {
+                                        nodeIdFilter = intValue
+                                    }
+                                }
+
+                            if !nodeIdFilterText.isEmpty {
+                                Button(action: {
+                                    nodeIdFilterText = ""
+                                    nodeIdFilter = nil
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                        .imageScale(.small)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .onChange(of: nodeIdFilter) { oldValue, newValue in
+                        // Sync text field when filter changes externally (e.g., from context menu)
+                        if let newValue = newValue {
+                            nodeIdFilterText = String(newValue)
+                        } else if nodeIdFilterText.isEmpty == false {
+                            // Only clear text if it's not already empty
+                            nodeIdFilterText = ""
+                        }
+                    }
+
+                    Toggle("All References", isOn: $nodeIdFilterAllReferences)
+                }
+
+                // 3. Time Filter
+                Section("Time Filter") {
+                    HStack {
+                        Text("Direction")
+                        Spacer()
+                        Picker("Operator", selection: $timestampFilterOperator) {
+                            Text("After").tag(">")
+                            Text("Before").tag("<")
+                        }
+                        .labelsHidden()
+                    }
+
                     ZStack(alignment: .trailing) {
-                        TextField("Node ID", text: $nodeIdFilterText)
+                        TextField("Timestamp", text: $timestampFilterText)
                             .textFieldStyle(.roundedBorder)
-                            .padding(.trailing, !nodeIdFilterText.isEmpty ? 24 : 0)
+                            .padding(.trailing, !timestampFilterText.isEmpty ? 24 : 0)
                             .onSubmit {
                                 // Only update filter when user presses Enter
-                                if nodeIdFilterText.isEmpty {
-                                    nodeIdFilter = nil
-                                } else if let intValue = Int(nodeIdFilterText) {
-                                    nodeIdFilter = intValue
+                                timestampFilterValue = timestampFilterText
+                            }
+                            .onChange(of: timestampFilterValue) { oldValue, newValue in
+                                // Sync text field when filter changes externally
+                                if timestampFilterText != newValue {
+                                    timestampFilterText = newValue
                                 }
                             }
 
-                        if !nodeIdFilterText.isEmpty {
+                        if !timestampFilterText.isEmpty {
                             Button(action: {
-                                nodeIdFilterText = ""
-                                nodeIdFilter = nil
+                                timestampFilterText = ""
+                                timestampFilterValue = ""
                             }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundStyle(.secondary)
@@ -997,160 +1128,122 @@ struct ContentView: View {
                         }
                     }
                 }
-                .onChange(of: nodeIdFilter) { oldValue, newValue in
-                    // Sync text field when filter changes externally (e.g., from context menu)
-                    if let newValue = newValue {
-                        nodeIdFilterText = String(newValue)
-                    } else if nodeIdFilterText.isEmpty == false {
-                        // Only clear text if it's not already empty
-                        nodeIdFilterText = ""
-                    }
-                }
 
-                Toggle("All References", isOn: $nodeIdFilterAllReferences)
-            }
-
-            // 3. Time Filter
-            Section("Time Filter") {
-                HStack {
-                    Text("Direction")
-                    Spacer()
-                    Picker("Operator", selection: $timestampFilterOperator) {
-                        Text("After").tag(">")
-                        Text("Before").tag("<")
-                    }
-                    .labelsHidden()
-                }
-
-                ZStack(alignment: .trailing) {
-                    TextField("Timestamp", text: $timestampFilterText)
-                        .textFieldStyle(.roundedBorder)
-                        .padding(.trailing, !timestampFilterText.isEmpty ? 24 : 0)
-                        .onSubmit {
-                            // Only update filter when user presses Enter
-                            timestampFilterValue = timestampFilterText
-                        }
-                        .onChange(of: timestampFilterValue) { oldValue, newValue in
-                            // Sync text field when filter changes externally
-                            if timestampFilterText != newValue {
-                                timestampFilterText = newValue
+                // 4. Event Filters
+                Section("Event Type Filters") {
+                    ForEach(allEventTypes, id: \.self) { eventType in
+                        Toggle(
+                            isOn: Binding(
+                                get: { enabledEventTypes.contains(eventType) },
+                                set: { isEnabled in
+                                    if isEnabled {
+                                        enabledEventTypes.insert(eventType)
+                                    } else {
+                                        enabledEventTypes.remove(eventType)
+                                    }
+                                }
+                            )
+                        ) {
+                            HStack {
+                                Text(eventType)
+                                Spacer()
+                                let count = eventTypeCounts[eventType] ?? 0
+                                Text("\(count)")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(count > 0 ? .white : .secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        Capsule()
+                                            .fill(
+                                                count > 0
+                                                    ? Color.secondary : Color.secondary.opacity(0.2)
+                                            )
+                                    )
                             }
                         }
-
-                    if !timestampFilterText.isEmpty {
-                        Button(action: {
-                            timestampFilterText = ""
-                            timestampFilterValue = ""
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                                .imageScale(.small)
-                        }
-                        .buttonStyle(.plain)
                     }
                 }
-            }
 
-            // 4. Event Filters
-            Section("Event Type Filters") {
-                ForEach(allEventTypes, id: \.self) { eventType in
-                    Toggle(isOn: Binding(
-                        get: { enabledEventTypes.contains(eventType) },
-                        set: { isEnabled in
-                            if isEnabled {
-                                enabledEventTypes.insert(eventType)
-                            } else {
-                                enabledEventTypes.remove(eventType)
-                            }
-                        }
-                    )) {
-                        HStack {
-                            Text(eventType)
-                            Spacer()
-                            let count = eventTypeCounts[eventType] ?? 0
-                            Text("\(count)")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(count > 0 ? .white : .secondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(
-                                    Capsule()
-                                        .fill(count > 0 ? Color.secondary : Color.secondary.opacity(0.2))
+                // IncrementalSnapshot source filters (only shown when IncrementalSnapshot is enabled)
+                if enabledEventTypes.contains("IncrementalSnapshot") {
+                    Section("IncrementalSnapshot Sources") {
+                        ForEach(incrementalSourceTypes, id: \.id) { source in
+                            Toggle(
+                                isOn: Binding(
+                                    get: { enabledIncrementalSources.contains(source.id) },
+                                    set: { isEnabled in
+                                        if isEnabled {
+                                            enabledIncrementalSources.insert(source.id)
+                                        } else {
+                                            enabledIncrementalSources.remove(source.id)
+                                        }
+                                    }
                                 )
-                        }
-                    }
-                }
-            }
-
-            // IncrementalSnapshot source filters (only shown when IncrementalSnapshot is enabled)
-            if enabledEventTypes.contains("IncrementalSnapshot") {
-                Section("IncrementalSnapshot Sources") {
-                    ForEach(incrementalSourceTypes, id: \.id) { source in
-                        Toggle(isOn: Binding(
-                            get: { enabledIncrementalSources.contains(source.id) },
-                            set: { isEnabled in
-                                if isEnabled {
-                                    enabledIncrementalSources.insert(source.id)
-                                } else {
-                                    enabledIncrementalSources.remove(source.id)
+                            ) {
+                                HStack {
+                                    Text(source.name)
+                                    Spacer()
+                                    let count = incrementalSourceCounts[source.id] ?? 0
+                                    Text("\(count)")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(count > 0 ? .white : .secondary)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(
+                                            Capsule()
+                                                .fill(
+                                                    count > 0
+                                                        ? Color.secondary
+                                                        : Color.secondary.opacity(0.2))
+                                        )
                                 }
                             }
-                        )) {
-                            HStack {
-                                Text(source.name)
-                                Spacer()
-                                let count = incrementalSourceCounts[source.id] ?? 0
-                                Text("\(count)")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundColor(count > 0 ? .white : .secondary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(
-                                        Capsule()
-                                            .fill(count > 0 ? Color.secondary : Color.secondary.opacity(0.2))
-                                    )
-                            }
                         }
                     }
                 }
-            }
 
-            // Custom event tag filters (only shown when Custom is enabled)
-            if enabledEventTypes.contains("Custom") && !allCustomTags.isEmpty {
-                Section("Custom Event Tags") {
-                    ForEach(allCustomTags, id: \.self) { tag in
-                        Toggle(isOn: Binding(
-                            get: { enabledCustomTags.contains(tag) },
-                            set: { isEnabled in
-                                if isEnabled {
-                                    enabledCustomTags.insert(tag)
-                                } else {
-                                    enabledCustomTags.remove(tag)
+                // Custom event tag filters (only shown when Custom is enabled)
+                if enabledEventTypes.contains("Custom") && !allCustomTags.isEmpty {
+                    Section("Custom Event Tags") {
+                        ForEach(allCustomTags, id: \.self) { tag in
+                            Toggle(
+                                isOn: Binding(
+                                    get: { enabledCustomTags.contains(tag) },
+                                    set: { isEnabled in
+                                        if isEnabled {
+                                            enabledCustomTags.insert(tag)
+                                        } else {
+                                            enabledCustomTags.remove(tag)
+                                        }
+                                    }
+                                )
+                            ) {
+                                HStack {
+                                    Text(tag)
+                                    Spacer()
+                                    let count = customTagCounts[tag] ?? 0
+                                    Text("\(count)")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(count > 0 ? .white : .secondary)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(
+                                            Capsule()
+                                                .fill(
+                                                    count > 0
+                                                        ? Color.secondary
+                                                        : Color.secondary.opacity(0.2))
+                                        )
                                 }
                             }
-                        )) {
-                            HStack {
-                                Text(tag)
-                                Spacer()
-                                let count = customTagCounts[tag] ?? 0
-                                Text("\(count)")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundColor(count > 0 ? .white : .secondary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(
-                                        Capsule()
-                                            .fill(count > 0 ? Color.secondary : Color.secondary.opacity(0.2))
-                                    )
-                            }
                         }
                     }
                 }
             }
+            .formStyle(.grouped)
         }
-        .formStyle(.grouped)
-        }
-        .navigationTitle("Filters")
+        .navigationTitle("Replay")
         .onAppear {
             computeEventCounts()
         }
@@ -1212,12 +1305,14 @@ struct ContentView: View {
         switch tag {
         case "performanceSpan":
             if let payload = eventData["payload"] as? [String: Any],
-               let op = payload["op"] as? String {
+                let op = payload["op"] as? String
+            {
                 return op
             }
         case "breadcrumb":
             if let payload = eventData["payload"] as? [String: Any],
-               let category = payload["category"] as? String {
+                let category = payload["category"] as? String
+            {
                 return category
             }
         default:
@@ -1300,7 +1395,9 @@ struct ContentView: View {
 
     // MARK: - Global Search Functions
 
-    private func findJSONPath(for query: String, in data: Any, currentPath: [String] = []) -> [String]? {
+    private func findJSONPath(for query: String, in data: Any, currentPath: [String] = [])
+        -> [String]?
+    {
         let queryLower = query.lowercased()
 
         if let dict = data as? [String: Any] {
@@ -1312,11 +1409,14 @@ struct ContentView: View {
                     return newPath
                 }
 
-                if let stringValue = value as? String, stringValue.lowercased().contains(queryLower) {
+                if let stringValue = value as? String, stringValue.lowercased().contains(queryLower)
+                {
                     return newPath
                 }
 
-                if let numberValue = value as? NSNumber, "\(numberValue)".lowercased().contains(queryLower) {
+                if let numberValue = value as? NSNumber,
+                    "\(numberValue)".lowercased().contains(queryLower)
+                {
                     return newPath
                 }
 
@@ -1335,7 +1435,9 @@ struct ContentView: View {
             }
         } else if let stringValue = data as? String, stringValue.lowercased().contains(queryLower) {
             return currentPath
-        } else if let numberValue = data as? NSNumber, "\(numberValue)".lowercased().contains(queryLower) {
+        } else if let numberValue = data as? NSNumber,
+            "\(numberValue)".lowercased().contains(queryLower)
+        {
             return currentPath
         }
 
@@ -1354,54 +1456,60 @@ struct ContentView: View {
         for segment in segments {
             for event in segment.events(useSortedOrder: useSortedOrder) {
                 // Search in event data
-                if let jsonData = try? JSONSerialization.data(withJSONObject: event.data, options: []),
-                   let jsonString = String(data: jsonData, encoding: .utf8),
-                   jsonString.lowercased().contains(query) {
+                if let jsonData = try? JSONSerialization.data(
+                    withJSONObject: event.data, options: []),
+                    let jsonString = String(data: jsonData, encoding: .utf8),
+                    jsonString.lowercased().contains(query)
+                {
                     // Find the specific path in the JSON where the match occurred
                     let path = findJSONPath(for: query, in: event.data)
-                    searchMatches.append(SearchMatch(
-                        segmentId: segment.id,
-                        eventId: event.id,
-                        matchText: "Event data",
-                        jsonPath: path,
-                        matchType: .eventData
-                    ))
+                    searchMatches.append(
+                        SearchMatch(
+                            segmentId: segment.id,
+                            eventId: event.id,
+                            matchText: "Event data",
+                            jsonPath: path,
+                            matchType: .eventData
+                        ))
                 }
 
                 // Search in event ID
                 if event.id.lowercased().contains(query) {
-                    searchMatches.append(SearchMatch(
-                        segmentId: segment.id,
-                        eventId: event.id,
-                        matchText: "Event ID: \(event.id)",
-                        jsonPath: nil,
-                        matchType: .eventId
-                    ))
+                    searchMatches.append(
+                        SearchMatch(
+                            segmentId: segment.id,
+                            eventId: event.id,
+                            matchText: "Event ID: \(event.id)",
+                            jsonPath: nil,
+                            matchType: .eventId
+                        ))
                 }
 
                 // Search in event type
                 let eventType = ContentView.displayName(for: event)
                 if eventType.lowercased().contains(query) {
-                    searchMatches.append(SearchMatch(
-                        segmentId: segment.id,
-                        eventId: event.id,
-                        matchText: "Event type: \(eventType)",
-                        jsonPath: nil,
-                        matchType: .eventType
-                    ))
+                    searchMatches.append(
+                        SearchMatch(
+                            segmentId: segment.id,
+                            eventId: event.id,
+                            matchText: "Event type: \(eventType)",
+                            jsonPath: nil,
+                            matchType: .eventType
+                        ))
                 }
             }
 
             // Search in segment ID
             if segment.id.lowercased().contains(query) {
                 if let firstEvent = segment.events(useSortedOrder: useSortedOrder).first {
-                    searchMatches.append(SearchMatch(
-                        segmentId: segment.id,
-                        eventId: firstEvent.id,
-                        matchText: "Segment ID: \(segment.id)",
-                        jsonPath: nil,
-                        matchType: .eventId
-                    ))
+                    searchMatches.append(
+                        SearchMatch(
+                            segmentId: segment.id,
+                            eventId: firstEvent.id,
+                            matchText: "Segment ID: \(segment.id)",
+                            jsonPath: nil,
+                            matchType: .eventId
+                        ))
                 }
             }
         }
@@ -1420,7 +1528,8 @@ struct ContentView: View {
 
     private func previousSearchMatch() {
         guard !searchMatches.isEmpty else { return }
-        currentSearchIndex = currentSearchIndex > 0 ? currentSearchIndex - 1 : searchMatches.count - 1
+        currentSearchIndex =
+            currentSearchIndex > 0 ? currentSearchIndex - 1 : searchMatches.count - 1
         selectSearchMatch(at: currentSearchIndex)
     }
 
@@ -1444,22 +1553,26 @@ struct ContentView: View {
 
     private func selectNextEvent() {
         guard let currentEvent = selectedEvent,
-              let segment = displayedSegment else { return }
+            let segment = displayedSegment
+        else { return }
 
         let events = segment.events(useSortedOrder: useSortedOrder)
         if let currentIndex = events.firstIndex(where: { $0.id == currentEvent.id }),
-           currentIndex + 1 < events.count {
+            currentIndex + 1 < events.count
+        {
             selectedEvent = events[currentIndex + 1]
         }
     }
 
     private func selectPreviousEvent() {
         guard let currentEvent = selectedEvent,
-              let segment = displayedSegment else { return }
+            let segment = displayedSegment
+        else { return }
 
         let events = segment.events(useSortedOrder: useSortedOrder)
         if let currentIndex = events.firstIndex(where: { $0.id == currentEvent.id }),
-           currentIndex > 0 {
+            currentIndex > 0
+        {
             selectedEvent = events[currentIndex - 1]
         }
     }
@@ -1474,7 +1587,8 @@ struct ContentView: View {
         }
 
         if let currentIndex = filteredSegments.firstIndex(where: { $0.id == currentSegment.id }),
-           currentIndex + 1 < filteredSegments.count {
+            currentIndex + 1 < filteredSegments.count
+        {
             selectedSegmentIDs = [filteredSegments[currentIndex + 1].id]
         }
     }
@@ -1489,7 +1603,8 @@ struct ContentView: View {
         }
 
         if let currentIndex = filteredSegments.firstIndex(where: { $0.id == currentSegment.id }),
-           currentIndex > 0 {
+            currentIndex > 0
+        {
             selectedSegmentIDs = [filteredSegments[currentIndex - 1].id]
         }
     }
@@ -1502,10 +1617,10 @@ struct ContentView: View {
             errorMessage = "Invalid Sentry replay URL: \(error.localizedDescription)"
             return
         }
-        
+
         isLoading = true
         errorMessage = nil
-        
+
         Task {
             do {
                 let fetchedSegments = try await SentryAPIService.shared.fetchReplaySegments(
@@ -1513,7 +1628,7 @@ struct ContentView: View {
                     projectId: urlComponents.projectId,
                     replayId: urlComponents.replayId
                 )
-                
+
                 await MainActor.run {
                     self.segments = fetchedSegments
                     self.isLoading = false
@@ -1526,7 +1641,6 @@ struct ContentView: View {
             }
         }
     }
-    
 
     private func loadFromClipboard() {
         let pasteboard = NSPasteboard.general
@@ -1557,18 +1671,18 @@ struct ContentView: View {
 
         do {
             let jsonObject = try JSONSerialization.jsonObject(with: jsonData)
-            
+
             if let outerArray = jsonObject as? [Any] {
                 // Check if it's an array of arrays of events [[events...], [events...]]
                 var parsedSegments: [ReplaySegment] = []
-                
+
                 for (index, item) in outerArray.enumerated() {
                     if let eventsArray = item as? [[String: Any]] {
                         let segment = createSegmentFromEvents(eventsArray, id: "segment-\(index)")
                         parsedSegments.append(segment)
                     }
                 }
-                
+
                 if !parsedSegments.isEmpty {
                     segments = parsedSegments
                     errorMessage = nil
@@ -1599,7 +1713,8 @@ struct ContentView: View {
                 errorMessage = nil
 
                 NSLog("📋 Loading from CURL command")
-                let fetchedSegments = try await SentryAPIService.shared.fetchReplaySegmentsFromCURL(curlCommand)
+                let fetchedSegments = try await SentryAPIService.shared.fetchReplaySegmentsFromCURL(
+                    curlCommand)
 
                 await MainActor.run {
                     segments = fetchedSegments
@@ -1617,61 +1732,64 @@ struct ContentView: View {
         }
     }
 
-    private func createSegmentFromEvents(_ eventsArray: [[String: Any]], id: String) -> ReplaySegment {
+    private func createSegmentFromEvents(_ eventsArray: [[String: Any]], id: String)
+        -> ReplaySegment
+    {
         let events = eventsArray.enumerated().map { index, eventData in
             let eventId = eventData["id"] as? String ?? "event-\(index)"
             let type = parseEventType(eventData["type"])
             let timestamp = parseTimestamp(from: eventData["timestamp"]) ?? Date()
-            
+
             let data = eventData["data"] as? [String: Any] ?? eventData
-            
+
             return ReplayEvent(id: eventId, type: type, timestamp: timestamp, data: data)
         }
-        
+
         let timestamp = events.first?.timestamp ?? Date()
         return ReplaySegment(id: id, timestamp: timestamp, events: events)
     }
-    
+
     private func parseSegmentsFromClipboard(_ jsonArray: [[String: Any]]) -> [ReplaySegment] {
         return jsonArray.compactMap { segmentData in
-            guard let id = segmentData["id"] as? String ?? segmentData["segment_id"] as? String else {
+            guard let id = segmentData["id"] as? String ?? segmentData["segment_id"] as? String
+            else {
                 return nil
             }
-            
+
             let timestamp = parseTimestamp(from: segmentData["timestamp"]) ?? Date()
             let events = parseEventsFromSegmentData(segmentData)
-            
+
             return ReplaySegment(id: id, timestamp: timestamp, events: events)
         }
     }
-    
+
     private func parseEventsFromSegmentData(_ segmentData: [String: Any]) -> [ReplayEvent] {
         if let eventsArray = segmentData["events"] as? [[String: Any]] {
             return eventsArray.enumerated().compactMap { index, eventData in
                 let id = eventData["id"] as? String ?? "event-\(index)"
                 let type = parseEventType(eventData["type"])
                 let timestamp = parseTimestamp(from: eventData["timestamp"]) ?? Date()
-                
+
                 let data = eventData["data"] as? [String: Any] ?? eventData
-                
+
                 return ReplayEvent(id: id, type: type, timestamp: timestamp, data: data)
             }
         } else {
             var data = segmentData
             data.removeValue(forKey: "id")
             data.removeValue(forKey: "segment_id")
-            
+
             return [ReplayEvent(id: "event-1", type: -1, timestamp: Date(), data: data)]
         }
     }
-    
+
     private func parseTimestamp(from value: Any?) -> Date? {
         if let timestamp = value as? TimeInterval {
             // Check if timestamp is in milliseconds
             // Use a more reasonable threshold: Jan 1, 2020 in seconds (1577836800)
-            if timestamp > 1577836800 {
+            if timestamp > 1_577_836_800 {
                 // Could be milliseconds - check if it's way too large for seconds
-                if timestamp > 1577836800000 {
+                if timestamp > 1_577_836_800_000 {
                     // Definitely milliseconds, convert to seconds
                     return Date(timeIntervalSince1970: timestamp / 1000)
                 } else {
@@ -1688,25 +1806,25 @@ struct ContentView: View {
         }
         return nil
     }
-    
+
     private func parseEventType(_ value: Any?) -> Int {
         guard let typeValue = value else { return -1 }
-        
+
         // Handle both string and numeric types
         if let stringValue = typeValue as? String, let intValue = Int(stringValue) {
             return intValue
         } else if let intValue = typeValue as? Int {
             return intValue
         }
-        
+
         return -1
     }
-    
+
     // Display name for event type in UI
     static func displayName(for event: ReplayEvent) -> String {
         switch event.type {
         case 0: return "DomContentLoaded"
-        case 1: return "Load" 
+        case 1: return "Load"
         case 2: return "FullSnapshot"
         case 3: return incrementalSnapshotDisplayName(eventData: event.data)
         case 4: return "Meta"
@@ -1715,7 +1833,7 @@ struct ContentView: View {
         default: return "unknown(\(event.type))"
         }
     }
-    
+
     // Base event type name for filtering
     static func baseTypeName(for eventType: Int) -> String {
         switch eventType {
@@ -1729,7 +1847,7 @@ struct ContentView: View {
         default: return "unknown"
         }
     }
-    
+
     static func incrementalSnapshotDisplayName(eventData: [String: Any]) -> String {
         // eventData is already the inner "data" object from the event
         guard let source = eventData["source"] else {
@@ -1789,31 +1907,33 @@ struct ContentView: View {
 
         return count
     }
-    
+
     static func customEventDisplayName(eventData: [String: Any]) -> String {
         // eventData is already the inner "data" object from the event
         guard let tag = eventData["tag"] as? String else {
             return "Custom"
         }
-        
+
         switch tag {
         case "performanceSpan":
             if let payload = eventData["payload"] as? [String: Any],
-               let op = payload["op"] as? String {
+                let op = payload["op"] as? String
+            {
                 return op
             }
         case "breadcrumb":
             if let payload = eventData["payload"] as? [String: Any],
-               let category = payload["category"] as? String {
+                let category = payload["category"] as? String
+            {
                 return category
             }
         default:
             break
         }
-        
+
         return tag
     }
-    
+
     private var currentDisplayedSegmentCacheKey: String? {
         guard let primarySegment = primarySelectedSegment else { return nil }
         return "\(primarySegment.id)-\(currentFilterCacheKey)"
@@ -1826,7 +1946,8 @@ struct ContentView: View {
 
         // Return cached result if segment ID and filters match
         if let cacheKey = currentDisplayedSegmentCacheKey,
-           cachedDisplayedSegmentId == cacheKey {
+            cachedDisplayedSegmentId == cacheKey
+        {
             return cachedDisplayedSegment
         }
 
@@ -1851,25 +1972,30 @@ struct ContentView: View {
             cachedDisplayedSegmentId = nil
         }
     }
-    
+
     @ViewBuilder
     private var eventsAndDetailsView: some View {
         if let displayedSegment = displayedSegment {
             HSplitView {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .center) {
-                        Text("Events (\(displayedSegment.events(useSortedOrder: useSortedOrder).count))")
-                            .font(.headline)
-                        
+                        Text(
+                            "Events (\(displayedSegment.events(useSortedOrder: useSortedOrder).count))"
+                        )
+                        .font(.headline)
+
                         Spacer()
-                        
+
                         if displayedSegment.wasResorted {
                             Button(action: {
                                 useSortedOrder.toggle()
                             }) {
                                 HStack(spacing: 4) {
-                                    Image(systemName: useSortedOrder ? "arrow.up.arrow.down" : "list.number")
-                                        .font(.caption)
+                                    Image(
+                                        systemName: useSortedOrder
+                                            ? "arrow.up.arrow.down" : "list.number"
+                                    )
+                                    .font(.caption)
                                     Text(useSortedOrder ? "Sorted" : "Original")
                                         .font(.caption)
                                         .fixedSize()
@@ -1882,7 +2008,7 @@ struct ContentView: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        
+
                         if let eventsDuration = eventsDuration(for: displayedSegment) {
                             Text(eventsDuration)
                                 .font(.caption)
@@ -1891,7 +2017,7 @@ struct ContentView: View {
                     }
                     .frame(height: 44)
                     .padding(.trailing, 16)
-                    
+
                     // OPTIMIZATION: Cache enumerated array to avoid recreating on every render
                     let events = displayedSegment.events(useSortedOrder: useSortedOrder)
                     let eventsArray = Array(events.enumerated())
@@ -1949,24 +2075,29 @@ struct ContentView: View {
                                 .padding(.horizontal, 16)
 
                                 JSONInspectorView(
-                            data: selectedEvent.data,
-                            onHighlightElement: highlightElement,
-                            onFindInSource: findInSource,
-                            onFilterForNode: filterForNode,
-                            onFilterForNodeAllReferences: filterForNodeAllReferences,
-                            highlightPath: {
-                                // Priority: search match > node filter
-                                if let searchMatch = currentSearchMatch, searchMatch.matchType == .eventData {
-                                    return searchMatch.jsonPath
-                                } else if let nodeId = nodeIdFilter {
-                                    return findNodeIdPath(nodeId: nodeId, in: selectedEvent.data)
-                                }
-                                return nil
-                            }(),
-                            searchQuery: currentSearchMatch?.matchType == .eventData ? globalSearchQuery : (nodeIdFilter != nil ? "\(nodeIdFilter!)" : nil)
-                        )
-                        .id(selectedEvent.id)
-                                    .padding(.horizontal, 16)
+                                    data: selectedEvent.data,
+                                    onHighlightElement: highlightElement,
+                                    onFindInSource: findInSource,
+                                    onFilterForNode: filterForNode,
+                                    onFilterForNodeAllReferences: filterForNodeAllReferences,
+                                    highlightPath: {
+                                        // Priority: search match > node filter
+                                        if let searchMatch = currentSearchMatch,
+                                            searchMatch.matchType == .eventData
+                                        {
+                                            return searchMatch.jsonPath
+                                        } else if let nodeId = nodeIdFilter {
+                                            return findNodeIdPath(
+                                                nodeId: nodeId, in: selectedEvent.data)
+                                        }
+                                        return nil
+                                    }(),
+                                    searchQuery: currentSearchMatch?.matchType == .eventData
+                                        ? globalSearchQuery
+                                        : (nodeIdFilter != nil ? "\(nodeIdFilter!)" : nil)
+                                )
+                                .id(selectedEvent.id)
+                                .padding(.horizontal, 16)
                             }
                         } else {
                             VStack {
@@ -2031,18 +2162,20 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
-    
+
     private func eventsDuration(for segment: ReplaySegment) -> String? {
         let events = segment.events(useSortedOrder: useSortedOrder)
         guard events.count > 1,
-              let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
-              let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }) else {
+            let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
+            let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp })
+        else {
             return nil
         }
 
-        return formatDuration(lastEvent.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp))
+        return formatDuration(
+            lastEvent.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp))
     }
-    
+
     private func formatDuration(_ duration: TimeInterval) -> String {
         if duration < 1 {
             return String(format: "%.0fms", duration * 1000)

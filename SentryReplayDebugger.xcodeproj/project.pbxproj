@@ -31,6 +31,8 @@
 		A1234567890ABCDEF050 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF051 /* AuthService.swift */; };
 		A1234567890ABCDEF052 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF053 /* KeychainHelper.swift */; };
 		A1234567890ABCDEF054 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF055 /* LoginView.swift */; };
+		A1234567890ABCDEF070 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF071 /* UserProfile.swift */; };
+		A1234567890ABCDEF072 /* UserAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF073 /* UserAvatarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,6 +82,8 @@
 		A1234567890ABCDEF051 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF053 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF055 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF071 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF073 /* UserAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAvatarView.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF060 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		C516FA0458D3442284511A93 /* DOMNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMNode.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -161,6 +165,7 @@
 			isa = PBXGroup;
 			children = (
 				A1234567890ABCDEF031 /* ReplayModels.swift */,
+				A1234567890ABCDEF071 /* UserProfile.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -174,6 +179,7 @@
 				A1234567890ABCDEF037 /* JSONInspectorView.swift */,
 				A1234567890ABCDEF055 /* LoginView.swift */,
 				A1234567890ABCDEF039 /* SegmentListView.swift */,
+				A1234567890ABCDEF073 /* UserAvatarView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -391,6 +397,8 @@
 				A1234567890ABCDEF050 /* AuthService.swift in Sources */,
 				A1234567890ABCDEF052 /* KeychainHelper.swift in Sources */,
 				A1234567890ABCDEF054 /* LoginView.swift in Sources */,
+				A1234567890ABCDEF070 /* UserProfile.swift in Sources */,
+				A1234567890ABCDEF072 /* UserAvatarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

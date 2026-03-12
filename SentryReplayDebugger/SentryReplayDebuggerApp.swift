@@ -37,7 +37,6 @@ struct SentryReplayDebuggerApp: App {
             .environmentObject(authService)
         }
         .windowResizability(.contentSize)
-        .windowToolbarStyle(.unifiedCompact)
         .commands {
             CommandGroup(after: .appInfo) {
                 if authService.isAuthenticated {
