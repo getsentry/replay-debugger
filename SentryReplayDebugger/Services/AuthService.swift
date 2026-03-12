@@ -289,7 +289,15 @@ class AuthService: ObservableObject {
 
     func fetchUserProfile() async {
         do {
-            let profile = try await SentryAPIService.shared.fetchUserProfile()
+            var profile = try await SentryAPIService.shared.fetchUserProfile()
+            let isSuperuser = await SentryAPIService.shared.fetchIsSuperuser()
+            profile = UserProfile(
+                name: profile.name,
+                email: profile.email,
+                avatarURL: profile.avatarURL,
+                isSuperuser: isSuperuser
+            )
+            NSLog("👤 Profile loaded: \(profile.email), isSuperuser: \(profile.isSuperuser)")
             userProfile = profile
             Self.cacheProfile(profile)
         } catch {

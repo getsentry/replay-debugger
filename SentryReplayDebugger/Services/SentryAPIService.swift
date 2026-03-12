@@ -26,11 +26,45 @@ class SentryAPIService: ObservableObject {
 
         let (data, _) = try await performRequest(request)
 
+        if let body = String(data: data, encoding: .utf8) {
+            NSLog("📋 oauth/userinfo response: \(body)")
+        }
+
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw APIError.decodingError
         }
 
         return UserProfile(from: json)
+    }
+
+    func fetchIsSuperuser() async -> Bool {
+        let url = URL(string: "https://sentry.io/api/0/users/me/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        addStandardHeaders(to: &request)
+
+        if let authToken = await getAuthToken() {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return false
+            }
+            if let body = String(data: data, encoding: .utf8) {
+                NSLog("📋 users/me response: \(body)")
+            }
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return false
+            }
+            return json["isSuperuser"] as? Bool
+                ?? (json["is_superuser"] as? Bool ?? false)
+        } catch {
+            NSLog("⚠️ Failed to fetch superuser status: \(error.localizedDescription)")
+            return false
+        }
     }
 
     func fetchReplaySegments(orgSlug: String, projectId: String, replayId: String) async throws -> [ReplaySegment] {
@@ -119,6 +153,10 @@ class SentryAPIService: ObservableObject {
             }
 
             throw APIError.httpError(401)
+        }
+
+        if httpResponse.statusCode == 403 {
+            throw APIError.superuserRequired(originalRequest: request)
         }
 
         guard httpResponse.statusCode == 200 else {
@@ -239,6 +277,10 @@ class SentryAPIService: ObservableObject {
             throw APIError.invalidResponse
         }
 
+        if httpResponse.statusCode == 403 {
+            throw APIError.superuserRequired(originalRequest: request)
+        }
+
         guard httpResponse.statusCode == 200 else {
             throw APIError.httpError(httpResponse.statusCode)
         }
@@ -342,6 +384,7 @@ class SentryAPIService: ObservableObject {
 
         return (nil, false)
     }
+
 }
 
 
@@ -349,7 +392,8 @@ enum APIError: Error, LocalizedError {
     case invalidResponse
     case httpError(Int)
     case decodingError
-    
+    case superuserRequired(originalRequest: URLRequest)
+
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
@@ -358,6 +402,8 @@ enum APIError: Error, LocalizedError {
             return "HTTP error with status code: \(code)"
         case .decodingError:
             return "Failed to decode response data"
+        case .superuserRequired:
+            return "Superuser access required"
         }
     }
 }

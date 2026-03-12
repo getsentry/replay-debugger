@@ -117,6 +117,8 @@ struct ContentView: View {
     @State private var nodeIdFilterAllReferences: Bool = false
     @State private var highlightedNodeId: Int? = nil
     @State private var showHighlightError: Bool = false
+    @State private var showSuperuserSheet = false
+    @State private var pendingSuperuserRetry: PendingSuperuserRetry?
     @State private var highlightErrorMessage: String = ""
     @State private var showInspector = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -453,6 +455,9 @@ struct ContentView: View {
             Button("OK") {}
         } message: {
             Text(highlightErrorMessage)
+        }
+        .sheet(isPresented: $showSuperuserSheet) {
+            SuperuserAccessView(isPresented: $showSuperuserSheet, onSuccess: retrySuperuserRequest)
         }
         .safeAreaInset(edge: .bottom) {
             if let errorMessage = errorMessage {
@@ -1628,6 +1633,14 @@ struct ContentView: View {
 
                 self.segments = fetchedSegments
                 self.isLoading = false
+            } catch let error as APIError {
+                if case .superuserRequired = error {
+                    self.pendingSuperuserRetry = .url(url)
+                    self.showSuperuserSheet = true
+                } else {
+                    self.errorMessage = "Failed to fetch replay data: \(error.localizedDescription)"
+                }
+                self.isLoading = false
             } catch {
                 self.errorMessage = "Failed to fetch replay data: \(error.localizedDescription)"
                 self.isLoading = false
@@ -1720,11 +1733,31 @@ struct ContentView: View {
                 isLoading = false
                 errorMessage = nil
                 NSLog("✅ Successfully loaded \(fetchedSegments.count) segments from CURL")
+            } catch let error as APIError {
+                if case .superuserRequired = error {
+                    self.pendingSuperuserRetry = .curl(curlCommand)
+                    self.showSuperuserSheet = true
+                } else {
+                    errorMessage = "Failed to load from CURL: \(error.localizedDescription)"
+                }
+                isLoading = false
+                NSLog("❌ CURL load failed: \(error)")
             } catch {
                 isLoading = false
                 errorMessage = "Failed to load from CURL: \(error.localizedDescription)"
                 NSLog("❌ CURL load failed: \(error)")
             }
+        }
+    }
+
+    private func retrySuperuserRequest() {
+        guard let retry = pendingSuperuserRetry else { return }
+        pendingSuperuserRetry = nil
+        switch retry {
+        case .url(let url):
+            fetchReplayFromURL(url)
+        case .curl(let curlCommand):
+            loadFromCURLCommand(curlCommand)
         }
     }
 

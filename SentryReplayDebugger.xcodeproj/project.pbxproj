@@ -33,6 +33,10 @@
 		A1234567890ABCDEF054 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF055 /* LoginView.swift */; };
 		A1234567890ABCDEF070 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF071 /* UserProfile.swift */; };
 		A1234567890ABCDEF072 /* UserAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF073 /* UserAvatarView.swift */; };
+		A1234567890ABCDEF080 /* SuperuserModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF081 /* SuperuserModels.swift */; };
+		A1234567890ABCDEF082 /* SuperuserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF083 /* SuperuserService.swift */; };
+		A1234567890ABCDEF084 /* SuperuserAccessView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF085 /* SuperuserAccessView.swift */; };
+		A1234567890ABCDEF086 /* WebAuthnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF087 /* WebAuthnView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,9 +86,13 @@
 		A1234567890ABCDEF051 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF053 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF055 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF060 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		A1234567890ABCDEF071 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF073 /* UserAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAvatarView.swift; sourceTree = "<group>"; };
-		A1234567890ABCDEF060 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		A1234567890ABCDEF081 /* SuperuserModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuperuserModels.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF083 /* SuperuserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuperuserService.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF085 /* SuperuserAccessView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuperuserAccessView.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF087 /* WebAuthnView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebAuthnView.swift; sourceTree = "<group>"; };
 		C516FA0458D3442284511A93 /* DOMNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMNode.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -165,6 +173,7 @@
 			isa = PBXGroup;
 			children = (
 				A1234567890ABCDEF031 /* ReplayModels.swift */,
+				A1234567890ABCDEF081 /* SuperuserModels.swift */,
 				A1234567890ABCDEF071 /* UserProfile.swift */,
 			);
 			path = Models;
@@ -179,7 +188,9 @@
 				A1234567890ABCDEF037 /* JSONInspectorView.swift */,
 				A1234567890ABCDEF055 /* LoginView.swift */,
 				A1234567890ABCDEF039 /* SegmentListView.swift */,
+				A1234567890ABCDEF085 /* SuperuserAccessView.swift */,
 				A1234567890ABCDEF073 /* UserAvatarView.swift */,
+				A1234567890ABCDEF087 /* WebAuthnView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -190,6 +201,7 @@
 				A1234567890ABCDEF051 /* AuthService.swift */,
 				A1234567890ABCDEF053 /* KeychainHelper.swift */,
 				A1234567890ABCDEF033 /* SentryAPIService.swift */,
+				A1234567890ABCDEF083 /* SuperuserService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -399,6 +411,10 @@
 				A1234567890ABCDEF054 /* LoginView.swift in Sources */,
 				A1234567890ABCDEF070 /* UserProfile.swift in Sources */,
 				A1234567890ABCDEF072 /* UserAvatarView.swift in Sources */,
+				A1234567890ABCDEF080 /* SuperuserModels.swift in Sources */,
+				A1234567890ABCDEF082 /* SuperuserService.swift in Sources */,
+				A1234567890ABCDEF084 /* SuperuserAccessView.swift in Sources */,
+				A1234567890ABCDEF086 /* WebAuthnView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -644,7 +660,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"SentryReplayDebugger/Preview Content\"";
-				DEVELOPMENT_TEAM = 5G46K89SAC;
+				DEVELOPMENT_TEAM = 97JCY7859U;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
@@ -658,7 +674,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sentry.SentryReplayDebugger;
+				PRODUCT_BUNDLE_IDENTIFIER = io.sentry.SentryReplayDebugger;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
@@ -680,7 +696,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"SentryReplayDebugger/Preview Content\"";
-				DEVELOPMENT_TEAM = 5G46K89SAC;
+				DEVELOPMENT_TEAM = 97JCY7859U;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
@@ -695,7 +711,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				"MACOSX_DEPLOYMENT_TARGET[arch=arm64]" = 14.6;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sentry.SentryReplayDebugger;
+				PRODUCT_BUNDLE_IDENTIFIER = io.sentry.SentryReplayDebugger;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SUPPORTED_PLATFORMS = macosx;
