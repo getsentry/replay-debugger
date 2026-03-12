@@ -43,14 +43,14 @@ struct JSONInspectorView: View {
             .onAppear {
                 expandToHighlightedPath()
             }
-            .onChange(of: data.keys.sorted().joined()) { _ in
+            .onChange(of: data.keys.sorted().joined()) {
                 expandToHighlightedPath()
             }
-            .onChange(of: highlightPath) { _ in
+            .onChange(of: highlightPath) {
                 expandToHighlightedPath()
             }
-            .onChange(of: scrollToKey) { newKey in
-                if let key = newKey {
+            .onChange(of: scrollToKey) {
+                if let key = scrollToKey {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation {
                             proxy.scrollTo(key, anchor: .center)

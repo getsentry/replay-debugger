@@ -222,7 +222,7 @@ struct SegmentListView: View {
             calculateColumnWidths()
             selectFirstSegmentAndEvent()
         }
-        .onChange(of: segments.count) { _ in
+        .onChange(of: segments.count) {
             calculateColumnWidths()
             selectFirstSegmentAndEvent()
         }

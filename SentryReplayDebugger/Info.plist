@@ -17,5 +17,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>OAUTH_CLIENT_ID</key>
+	<string>$(OAUTH_CLIENT_ID)</string>
+	<key>OAUTH_CLIENT_SECRET</key>
+	<string>$(OAUTH_CLIENT_SECRET)</string>
 </dict>
 </plist>

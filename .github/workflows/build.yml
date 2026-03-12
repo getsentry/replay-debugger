@@ -22,6 +22,10 @@ on:
         required: true
       SENTRY_DSN:
         required: false
+      OAUTH_CLIENT_ID:
+        required: true
+      OAUTH_CLIENT_SECRET:
+        required: true
 
 permissions:
   contents: read
@@ -29,12 +33,15 @@ permissions:
 jobs:
   build:
     name: Build app
-    runs-on: macos-latest
+    runs-on: macos-26
     env:
       APP_ARCHIVE: build/Release/SentryReplayDebugger.zip
     steps:
       - name: Checkout repo
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: Create Config.xcconfig
+        run: cp Config.example.xcconfig Config.xcconfig
 
       # Needed for fastlane
       - name: Setup Ruby
@@ -56,6 +63,8 @@ jobs:
           MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
+          OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
         run: bundle exec fastlane build_release
 
       - name: Notarize app

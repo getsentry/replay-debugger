@@ -10,15 +10,14 @@ permissions:
 
 jobs:
   test:
-    name: ${{ matrix.arch }}
+    name: arm64
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [arm64, x86_64]
     steps:
       - name: Checkout repo
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: Create Config.xcconfig
+        run: cp Config.example.xcconfig Config.xcconfig
 
       - name: Run tests
         run: |
@@ -26,6 +25,6 @@ jobs:
               -project SentryReplayDebugger.xcodeproj \
               -scheme SentryReplayDebugger \
               -configuration Debug \
-              -destination 'platform=macOS,arch=${{ matrix.arch }}' \
+              -destination 'platform=macOS,arch=arm64' \
               -only-testing:SentryReplayDebuggerTests \
               CODE_SIGNING_ALLOWED=NO

@@ -9,82 +9,127 @@ struct PaginatedResponse {
 class SentryAPIService: ObservableObject {
     static let shared = SentryAPIService()
 
-    private let baseURL = "https://sentry.io/api/0"
+    private let baseURL = "https://us.sentry.io/api/0"
     private let session = URLSession.shared
 
     private init() {}
-    
-    func fetchReplaySegments(orgSlug: String, replayId: String) async throws -> [ReplaySegment] {
-        let url = URL(string: "\(baseURL)/organizations/\(orgSlug)/replays/\(replayId)/recording-segments/")!
-        
+
+    func fetchUserProfile() async throws -> UserProfile {
+        let url = URL(string: "https://sentry.io/oauth/userinfo/")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        if let authToken = getAuthToken() {
+        addStandardHeaders(to: &request)
+
+        if let authToken = await getAuthToken() {
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         }
+
+        let (data, _) = try await performRequest(request)
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw APIError.decodingError
+        }
+
+        return UserProfile(from: json)
+    }
+
+    func fetchReplaySegments(orgSlug: String, projectId: String, replayId: String) async throws -> [ReplaySegment] {
+        let url = URL(string: "\(baseURL)/projects/\(orgSlug)/\(projectId)/replays/\(replayId)/recording-segments/?download=true&per_page=100")!
+        NSLog("🌐 Fetching replay segments: \(url.absoluteString)")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        addStandardHeaders(to: &request)
         
+        if let authToken = await getAuthToken() {
+            #if DEBUG
+            NSLog("🔑 Using auth token: \(authToken.prefix(8))...")
+            #endif
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        } else {
+            NSLog("⚠️ No auth token available")
+        }
+        
+        let (data, _) = try await performRequest(request)
+
+        let jsonObject = try JSONSerialization.jsonObject(with: data)
+
+        // Response with download=true is [[event, ...], [event, ...], ...]
+        // Each inner array is one segment's rrweb events
+        guard let outerArray = jsonObject as? [Any] else {
+            throw APIError.decodingError
+        }
+
+        var segments: [ReplaySegment] = []
+        for (index, item) in outerArray.enumerated() {
+            if let eventsArray = item as? [[String: Any]] {
+                let events = eventsArray.enumerated().map { eventIndex, eventData in
+                    let id = eventData["id"] as? String ?? "event-\(eventIndex)"
+                    let type = parseEventType(eventData["type"])
+                    let timestamp = parseTimestamp(from: eventData["timestamp"]) ?? Date()
+                    let data = eventData["data"] as? [String: Any] ?? eventData
+                    return ReplayEvent(id: id, type: type, timestamp: timestamp, data: data)
+                }
+                let timestamp = events.first?.timestamp ?? Date()
+                segments.append(ReplaySegment(id: "segment-\(index)", timestamp: timestamp, events: events))
+            }
+        }
+
+        NSLog("✅ Parsed \(segments.count) segments from API")
+        guard !segments.isEmpty else { throw APIError.decodingError }
+        return segments
+    }
+    
+    private func getAuthToken() async -> String? {
+        return await AuthService.shared.validAccessToken()
+    }
+
+    private func addStandardHeaders(to request: inout URLRequest) {
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Accept")
+    }
+
+    /// Perform a request with reactive 401 retry: on 401, refresh the token and retry once.
+    private func performRequest(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let (data, response) = try await session.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
         }
-        
+
+        if httpResponse.statusCode == 401 {
+            // Reactive refresh: try to get a new token and retry once
+            if let newToken = await AuthService.shared.handleUnauthorizedAndRetry() {
+                var retryRequest = request
+                retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+
+                let (retryData, retryResponse) = try await session.data(for: retryRequest)
+                guard let retryHttpResponse = retryResponse as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+
+                guard retryHttpResponse.statusCode == 200 else {
+                    if retryHttpResponse.statusCode == 401 {
+                        await AuthService.shared.logout()
+                    }
+                    throw APIError.httpError(retryHttpResponse.statusCode)
+                }
+
+                return (retryData, retryHttpResponse)
+            }
+
+            throw APIError.httpError(401)
+        }
+
         guard httpResponse.statusCode == 200 else {
+            let body = String(data: data, encoding: .utf8) ?? "<no body>"
+            NSLog("❌ HTTP \(httpResponse.statusCode): \(body)")
             throw APIError.httpError(httpResponse.statusCode)
         }
-        
-        do {
-            guard let jsonObject = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-                throw APIError.decodingError
-            }
-            
-            let segments = parseSegmentsFromJSON(jsonObject)
-            return segments.isEmpty ? createMockSegments() : segments
-        } catch {
-            return createMockSegments()
-        }
+
+        return (data, httpResponse)
     }
-    
-    private func getAuthToken() -> String? {
-        return UserDefaults.standard.string(forKey: "SentryAuthToken")
-    }
-    
-    private func parseSegmentsFromJSON(_ jsonArray: [[String: Any]]) -> [ReplaySegment] {
-        return jsonArray.compactMap { segmentData in
-            guard let id = segmentData["id"] as? String ?? segmentData["segment_id"] as? String else {
-                return nil
-            }
-            
-            let timestamp = parseTimestamp(from: segmentData["timestamp"]) ?? Date()
-            let events = parseEventsFromSegmentData(segmentData)
-            
-            return ReplaySegment(id: id, timestamp: timestamp, events: events)
-        }
-    }
-    
-    private func parseEventsFromSegmentData(_ segmentData: [String: Any]) -> [ReplayEvent] {
-        if let eventsArray = segmentData["events"] as? [[String: Any]] {
-            return eventsArray.enumerated().compactMap { index, eventData in
-                let id = eventData["id"] as? String ?? "event-\(index)"
-                let type = parseEventType(eventData["type"])
-                let timestamp = parseTimestamp(from: eventData["timestamp"]) ?? Date()
-                
-                let data = eventData["data"] as? [String: Any] ?? eventData
-                
-                return ReplayEvent(id: id, type: type, timestamp: timestamp, data: data)
-            }
-        } else {
-            var data = segmentData
-            data.removeValue(forKey: "id")
-            data.removeValue(forKey: "segment_id")
-            data.removeValue(forKey: "timestamp")
-            
-            return [ReplayEvent(id: "event-1", type: -1, timestamp: Date(), data: data)]
-        }
-    }
-    
+
     private func parseEventType(_ value: Any?) -> Int {
         guard let typeValue = value else { return -1 }
         
@@ -119,40 +164,6 @@ class SentryAPIService: ObservableObject {
             return formatter.date(from: dateString)
         }
         return nil
-    }
-    
-    
-    private func createMockSegments() -> [ReplaySegment] {
-        let mockEvents = [
-            ReplayEvent(
-                id: "event-1",
-                type: 2,  // FullSnapshot
-                timestamp: Date(),
-                data: [
-                    "selector": ".button-primary",
-                    "mutation_type": "attributes",
-                    "attribute": "class"
-                ]
-            ),
-            ReplayEvent(
-                id: "event-2",
-                type: 3,  // IncrementalSnapshot
-                timestamp: Date().addingTimeInterval(1000),
-                data: [
-                    "x": 150,
-                    "y": 200,
-                    "target": "button#submit"
-                ]
-            )
-        ]
-
-        return [
-            ReplaySegment(
-                id: "segment-0",
-                timestamp: Date(),
-                events: mockEvents
-            )
-        ]
     }
 
     // MARK: - CURL Command Support

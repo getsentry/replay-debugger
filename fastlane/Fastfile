@@ -33,7 +33,9 @@ platform :mac do
         'CODE_SIGN_ENTITLEMENTS' => 'SentryReplayDebugger/SentryReplayDebugger.Release.entitlements',
         'OTHER_CODE_SIGN_FLAGS' => '--timestamp --options=runtime',
         'SYMROOT' => File.expand_path('../build'),
-        'SENTRY_DSN' => ENV.fetch('SENTRY_DSN', '')
+        'SENTRY_DSN' => ENV.fetch('SENTRY_DSN', ''),
+        'OAUTH_CLIENT_ID' => ENV['OAUTH_CLIENT_ID'] || '',
+        'OAUTH_CLIENT_SECRET' => ENV['OAUTH_CLIENT_SECRET'] || '',
       }
     )
   end

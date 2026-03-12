@@ -3,6 +3,8 @@ import Sentry
 
 @main
 struct SentryReplayDebuggerApp: App {
+    @StateObject private var authService = AuthService.shared
+
     init() {
         // Only initialize Sentry if DSN is configured
         let dsn = Config.sentryDSN
@@ -25,9 +27,24 @@ struct SentryReplayDebuggerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            Group {
+                if authService.isAuthenticated {
+                    ContentView()
+                } else {
+                    LoginView(authService: authService)
+                }
+            }
+            .environmentObject(authService)
         }
         .windowResizability(.contentSize)
-        .windowToolbarStyle(.unifiedCompact)
+        .commands {
+            CommandGroup(after: .appInfo) {
+                if authService.isAuthenticated {
+                    Button("Sign Out") {
+                        authService.logout()
+                    }
+                }
+            }
+        }
     }
 }
