@@ -109,6 +109,9 @@ class SentryAPIService: ObservableObject {
                 }
 
                 guard retryHttpResponse.statusCode == 200 else {
+                    if retryHttpResponse.statusCode == 401 {
+                        await AuthService.shared.logout()
+                    }
                     throw APIError.httpError(retryHttpResponse.statusCode)
                 }
 

@@ -71,13 +71,19 @@ class AuthService: ObservableObject {
 
     // MARK: - Login
 
+    private var pendingOAuthState: String?
+
     func login(anchor: ASPresentationAnchor) {
+        let state = UUID().uuidString
+        pendingOAuthState = state
+
         var components = URLComponents(string: authorizeURL)!
         components.queryItems = [
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "client_id", value: clientId),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "scope", value: "org:read project:read team:read event:read openid profile email"),
+            URLQueryItem(name: "state", value: state),
         ]
 
         guard let url = components.url else {
@@ -128,6 +134,14 @@ class AuthService: ObservableObject {
             errorMessage = AuthError.missingAuthCode.localizedDescription
             return
         }
+
+        let returnedState = components.queryItems?.first(where: { $0.name == "state" })?.value
+        guard returnedState == pendingOAuthState else {
+            errorMessage = "OAuth state mismatch — possible CSRF attack"
+            pendingOAuthState = nil
+            return
+        }
+        pendingOAuthState = nil
 
         isLoading = true
 
