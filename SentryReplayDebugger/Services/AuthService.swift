@@ -272,10 +272,7 @@ class AuthService: ObservableObject {
         }
 
         // Refresh failed — credentials are dead
-        KeychainHelper.delete(key: Self.accessTokenKey)
-        KeychainHelper.delete(key: Self.refreshTokenKey)
-        KeychainHelper.delete(key: Self.tokenExpiryKey)
-        isAuthenticated = false
+        logout()
         return nil
     }
 
