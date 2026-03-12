@@ -462,7 +462,7 @@ struct ContentView: View {
         .onAppear {
             NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                 // Check if a text field has focus (to avoid interfering with text input)
-                if let firstResponder = NSApp.keyWindow?.firstResponder as? NSTextView {
+                if NSApp.keyWindow?.firstResponder is NSTextView {
                     return event
                 }
 
@@ -560,9 +560,6 @@ struct ContentView: View {
             if showGlobalSearch {
                 globalSearchBar
             }
-        }
-        .onChange(of: timestampFilterOperator) {
-            updateSelectedSegmentAfterFilter()
         }
     }
 
@@ -1629,15 +1626,11 @@ struct ContentView: View {
                     replayId: urlComponents.replayId
                 )
 
-                await MainActor.run {
-                    self.segments = fetchedSegments
-                    self.isLoading = false
-                }
+                self.segments = fetchedSegments
+                self.isLoading = false
             } catch {
-                await MainActor.run {
-                    self.errorMessage = "Failed to fetch replay data: \(error.localizedDescription)"
-                    self.isLoading = false
-                }
+                self.errorMessage = "Failed to fetch replay data: \(error.localizedDescription)"
+                self.isLoading = false
             }
         }
     }
@@ -1716,18 +1709,14 @@ struct ContentView: View {
                 let fetchedSegments = try await SentryAPIService.shared.fetchReplaySegmentsFromCURL(
                     curlCommand)
 
-                await MainActor.run {
-                    segments = fetchedSegments
-                    isLoading = false
-                    errorMessage = nil
-                    NSLog("✅ Successfully loaded \(fetchedSegments.count) segments from CURL")
-                }
+                segments = fetchedSegments
+                isLoading = false
+                errorMessage = nil
+                NSLog("✅ Successfully loaded \(fetchedSegments.count) segments from CURL")
             } catch {
-                await MainActor.run {
-                    isLoading = false
-                    errorMessage = "Failed to load from CURL: \(error.localizedDescription)"
-                    NSLog("❌ CURL load failed: \(error)")
-                }
+                isLoading = false
+                errorMessage = "Failed to load from CURL: \(error.localizedDescription)"
+                NSLog("❌ CURL load failed: \(error)")
             }
         }
     }
@@ -1971,209 +1960,6 @@ struct ContentView: View {
             cachedDisplayedSegment = nil
             cachedDisplayedSegmentId = nil
         }
-    }
-
-    @ViewBuilder
-    private var eventsAndDetailsView: some View {
-        if let displayedSegment = displayedSegment {
-            HSplitView {
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(alignment: .center) {
-                        Text(
-                            "Events (\(displayedSegment.events(useSortedOrder: useSortedOrder).count))"
-                        )
-                        .font(.headline)
-
-                        Spacer()
-
-                        if displayedSegment.wasResorted {
-                            Button(action: {
-                                useSortedOrder.toggle()
-                            }) {
-                                HStack(spacing: 4) {
-                                    Image(
-                                        systemName: useSortedOrder
-                                            ? "arrow.up.arrow.down" : "list.number"
-                                    )
-                                    .font(.caption)
-                                    Text(useSortedOrder ? "Sorted" : "Original")
-                                        .font(.caption)
-                                        .fixedSize()
-                                }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.blue.opacity(0.1))
-                                .foregroundColor(.blue)
-                                .cornerRadius(6)
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        if let eventsDuration = eventsDuration(for: displayedSegment) {
-                            Text(eventsDuration)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .frame(height: 44)
-                    .padding(.trailing, 16)
-
-                    // OPTIMIZATION: Cache enumerated array to avoid recreating on every render
-                    let events = displayedSegment.events(useSortedOrder: useSortedOrder)
-                    let eventsArray = Array(events.enumerated())
-
-                    List(eventsArray, id: \.element.id) { index, event in
-                        let previousEvent: ReplayEvent? = index > 0 ? events[index - 1] : nil
-                        EventRowView(
-                            event: event,
-                            isSelected: selectedEvent?.id == event.id,
-                            previousEvent: previousEvent,
-                            onTimestampClick: { timestamp in
-                                setTimestampFilter(timestamp)
-                            }
-                        )
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedEvent = event
-                        }
-                    }
-                }
-                .frame(minWidth: 280, idealWidth: 300, maxWidth: 450)
-
-                // Always show HSplitView to preserve split position
-                PersistentHSplitView(autosaveName: "inspector-detail-split") {
-                    // Left pane: JSON Inspector
-                    Group {
-                        if let selectedEvent = selectedEvent {
-                            VStack(alignment: .leading, spacing: 0) {
-                                HStack(alignment: .center) {
-                                    Text("Event Details")
-                                        .font(.headline)
-
-                                    Spacer()
-
-                                    if let timeFromStart = timeFromStart(for: selectedEvent) {
-                                        Text(timeFromStart)
-                                            .font(.caption)
-                                            .monospacedDigit()
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .background(Color.secondary.opacity(0.15))
-                                            .foregroundColor(.secondary)
-                                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                                    }
-
-                                    Text(ContentView.displayName(for: selectedEvent))
-                                        .font(.caption)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.secondary.opacity(0.15))
-                                        .foregroundColor(.secondary)
-                                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                                }
-                                .frame(height: 44)
-                                .padding(.horizontal, 16)
-
-                                JSONInspectorView(
-                                    data: selectedEvent.data,
-                                    onHighlightElement: highlightElement,
-                                    onFindInSource: findInSource,
-                                    onFilterForNode: filterForNode,
-                                    onFilterForNodeAllReferences: filterForNodeAllReferences,
-                                    highlightPath: {
-                                        // Priority: search match > node filter
-                                        if let searchMatch = currentSearchMatch,
-                                            searchMatch.matchType == .eventData
-                                        {
-                                            return searchMatch.jsonPath
-                                        } else if let nodeId = nodeIdFilter {
-                                            return findNodeIdPath(
-                                                nodeId: nodeId, in: selectedEvent.data)
-                                        }
-                                        return nil
-                                    }(),
-                                    searchQuery: currentSearchMatch?.matchType == .eventData
-                                        ? globalSearchQuery
-                                        : (nodeIdFilter != nil ? "\(nodeIdFilter!)" : nil)
-                                )
-                                .id(selectedEvent.id)
-                                .padding(.horizontal, 16)
-                            }
-                        } else {
-                            VStack {
-                                Image(systemName: "curlybraces")
-                                    .font(.largeTitle)
-                                    .foregroundColor(.secondary)
-                                Text("No Event Selected")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                                Text("Select an event to view its JSON data")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                    }
-                    .frame(minWidth: 300)
-                } right: {
-                    // Right pane: HTML Renderer (hidden for custom events)
-                    Group {
-                        if let selectedEvent = selectedEvent, selectedEvent.type == 5 {
-                            // Custom event - hide HTML panel
-                            EmptyView()
-                        } else if let eventIndex = selectedEventGlobalIndex {
-                            HTMLRenderPanel(
-                                events: allEvents,
-                                selectedEventIndex: eventIndex,
-                                fullSnapshotIndices: fullSnapshotIndices,
-                                metaIndices: metaIndices,
-                                renderStateCache: $htmlRenderStateCache,
-                                cacheInterval: cacheInterval,
-                                highlightedNodeId: $highlightedNodeId,
-                                onHighlightError: showHighlightErrorAlert,
-                                showSource: $showHTMLSource,
-                                sourceSearchQuery: $htmlSourceSearchQuery
-                            )
-                        } else {
-                            VStack {
-                                ProgressView()
-                                Text("Loading HTML renderer...")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                    }
-                    .frame(minWidth: 300)
-                }
-            }
-        } else {
-            VStack {
-                Image(systemName: "doc.text")
-                    .font(.largeTitle)
-                    .foregroundColor(.secondary)
-                Text("No Segment Selected")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                Text("Select a segment from the sidebar to view its events")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-
-    private func eventsDuration(for segment: ReplaySegment) -> String? {
-        let events = segment.events(useSortedOrder: useSortedOrder)
-        guard events.count > 1,
-            let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
-            let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp })
-        else {
-            return nil
-        }
-
-        return formatDuration(
-            lastEvent.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp))
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {

@@ -24,7 +24,7 @@ class SentryAPIService: ObservableObject {
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         }
 
-        let (data, httpResponse) = try await performRequest(request)
+        let (data, _) = try await performRequest(request)
 
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw APIError.decodingError
@@ -42,13 +42,15 @@ class SentryAPIService: ObservableObject {
         addStandardHeaders(to: &request)
         
         if let authToken = await getAuthToken() {
+            #if DEBUG
             NSLog("🔑 Using auth token: \(authToken.prefix(8))...")
+            #endif
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         } else {
             NSLog("⚠️ No auth token available")
         }
         
-        let (data, httpResponse) = try await performRequest(request)
+        let (data, _) = try await performRequest(request)
 
         let jsonObject = try JSONSerialization.jsonObject(with: data)
 
@@ -125,40 +127,6 @@ class SentryAPIService: ObservableObject {
         return (data, httpResponse)
     }
 
-    private func parseSegmentsFromJSON(_ jsonArray: [[String: Any]]) -> [ReplaySegment] {
-        return jsonArray.compactMap { segmentData in
-            guard let id = segmentData["id"] as? String ?? segmentData["segment_id"] as? String else {
-                return nil
-            }
-            
-            let timestamp = parseTimestamp(from: segmentData["timestamp"]) ?? Date()
-            let events = parseEventsFromSegmentData(segmentData)
-            
-            return ReplaySegment(id: id, timestamp: timestamp, events: events)
-        }
-    }
-    
-    private func parseEventsFromSegmentData(_ segmentData: [String: Any]) -> [ReplayEvent] {
-        if let eventsArray = segmentData["events"] as? [[String: Any]] {
-            return eventsArray.enumerated().compactMap { index, eventData in
-                let id = eventData["id"] as? String ?? "event-\(index)"
-                let type = parseEventType(eventData["type"])
-                let timestamp = parseTimestamp(from: eventData["timestamp"]) ?? Date()
-                
-                let data = eventData["data"] as? [String: Any] ?? eventData
-                
-                return ReplayEvent(id: id, type: type, timestamp: timestamp, data: data)
-            }
-        } else {
-            var data = segmentData
-            data.removeValue(forKey: "id")
-            data.removeValue(forKey: "segment_id")
-            data.removeValue(forKey: "timestamp")
-            
-            return [ReplayEvent(id: "event-1", type: -1, timestamp: Date(), data: data)]
-        }
-    }
-    
     private func parseEventType(_ value: Any?) -> Int {
         guard let typeValue = value else { return -1 }
         
@@ -193,40 +161,6 @@ class SentryAPIService: ObservableObject {
             return formatter.date(from: dateString)
         }
         return nil
-    }
-    
-    
-    private func createMockSegments() -> [ReplaySegment] {
-        let mockEvents = [
-            ReplayEvent(
-                id: "event-1",
-                type: 2,  // FullSnapshot
-                timestamp: Date(),
-                data: [
-                    "selector": ".button-primary",
-                    "mutation_type": "attributes",
-                    "attribute": "class"
-                ]
-            ),
-            ReplayEvent(
-                id: "event-2",
-                type: 3,  // IncrementalSnapshot
-                timestamp: Date().addingTimeInterval(1000),
-                data: [
-                    "x": 150,
-                    "y": 200,
-                    "target": "button#submit"
-                ]
-            )
-        ]
-
-        return [
-            ReplaySegment(
-                id: "segment-0",
-                timestamp: Date(),
-                events: mockEvents
-            )
-        ]
     }
 
     // MARK: - CURL Command Support

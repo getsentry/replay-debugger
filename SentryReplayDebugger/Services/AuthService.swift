@@ -176,7 +176,7 @@ class AuthService: ObservableObject {
 
     // MARK: - Token Expiry & Refresh
 
-    nonisolated func isTokenExpired(bufferSeconds: TimeInterval = 60) -> Bool {
+    func isTokenExpired(bufferSeconds: TimeInterval = 60) -> Bool {
         guard let expiryString = KeychainHelper.loadString(key: Self.tokenExpiryKey),
               let expiryInterval = Double(expiryString) else {
             // No expiry stored — treat as expired to be safe
@@ -247,7 +247,7 @@ class AuthService: ObservableObject {
         }
     }
 
-    nonisolated func loadAccessToken() -> String? {
+    func loadAccessToken() -> String? {
         return KeychainHelper.loadString(key: Self.accessTokenKey)
     }
 

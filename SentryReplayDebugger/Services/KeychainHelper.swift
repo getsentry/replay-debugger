@@ -4,6 +4,7 @@ import Security
 enum KeychainHelper {
     private static let service = "com.sentry.replay-debugger"
 
+    @discardableResult
     static func save(key: String, data: Data) -> Bool {
         delete(key: key)
 
@@ -49,6 +50,7 @@ enum KeychainHelper {
         return status == errSecSuccess || status == errSecItemNotFound
     }
 
+    @discardableResult
     static func saveString(key: String, value: String) -> Bool {
         guard let data = value.data(using: .utf8) else { return false }
         return save(key: key, data: data)
