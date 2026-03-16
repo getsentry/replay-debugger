@@ -2,6 +2,9 @@
 
 A macOS application for debugging and inspecting Sentry Session Replay data. View replay segments, inspect events, and render HTML snapshots from rrweb events.
 
+<img width="1418" height="866" alt="image" src="https://github.com/user-attachments/assets/28a27767-7d3c-4d51-a0c9-cf08ea07a39b" />
+
+
 ## Features
 
 - **Segment Browser**: View all replay segments with timestamps and metadata
