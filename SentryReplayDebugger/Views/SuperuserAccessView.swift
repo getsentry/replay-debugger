@@ -4,16 +4,28 @@ struct SuperuserAccessView: View {
     @Binding var isPresented: Bool
     let onSuccess: () -> Void
 
+    @State private var password: String = ""
     @State private var selectedCategory: SuperuserAccessCategory = .debugging
     @State private var reason: String = ""
     @State private var errorText: String?
+    @State private var isLoading = true
     @State private var isAuthenticating = false
     @State private var showWebAuthn = false
     @State private var webAuthnData: String?
     @State private var challengeJSON: String?
+    @State private var pendingSessionLogin = false
+    @State private var has2FA = false
+
+    private var userEmail: String? {
+        AuthService.shared.userProfile?.email
+    }
 
     private var isReasonValid: Bool {
         reason.count >= 4 && reason.count <= 128
+    }
+
+    private var needsPassword: Bool {
+        !has2FA
     }
 
     var body: some View {
@@ -24,6 +36,17 @@ struct SuperuserAccessView: View {
             Text("You are accessing a resource that requires superuser re-authentication.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+
+            if let email = userEmail {
+                Text("Authenticating as \(email)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if needsPassword {
+                SecureField("Password", text: $password)
+                    .textFieldStyle(.roundedBorder)
+            }
 
             Picker("Category", selection: $selectedCategory) {
                 ForEach(SuperuserAccessCategoryGroup.all, id: \.name) { group in
@@ -71,11 +94,25 @@ struct SuperuserAccessView: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
-                .disabled(!isReasonValid || isAuthenticating)
+                .disabled(!isReasonValid || (needsPassword && password.isEmpty) || isLoading || isAuthenticating)
             }
         }
         .padding(24)
         .frame(width: 460)
+        .task {
+            do {
+                try await SuperuserService.shared.seedCSRF()
+                let result = try await SuperuserService.shared.fetchAuthenticators()
+                if case .webAuthn(let challenge, let data) = result {
+                    has2FA = true
+                    challengeJSON = challenge
+                    webAuthnData = data
+                }
+            } catch {
+                errorText = error.localizedDescription
+            }
+            isLoading = false
+        }
         .background {
             if showWebAuthn, let webAuthnData {
                 WebAuthnBridgeView(
@@ -96,17 +133,48 @@ struct SuperuserAccessView: View {
         isAuthenticating = true
         errorText = nil
         showWebAuthn = false
+        pendingSessionLogin = false
 
         Task {
             do {
-                let result = try await SuperuserService.shared.fetchAuthenticators()
-                self.challengeJSON = result.challengeJSON
-                self.webAuthnData = result.webAuthnData
-                self.showWebAuthn = true
+                if has2FA {
+                    // 2FA — trigger WebAuthn for login
+                    pendingSessionLogin = true
+                    showWebAuthn = true
+                } else {
+                    // No 2FA — login with just password
+                    guard let email = userEmail else {
+                        throw SuperuserError.invalidResponse
+                    }
+                    try await SuperuserService.shared.loginWithPassword(
+                        email: email, password: password
+                    )
+                    try await performElevation()
+                }
             } catch {
                 self.isAuthenticating = false
+                self.password = ""
                 self.errorText = error.localizedDescription
             }
+        }
+    }
+
+    private func performElevation() async throws {
+        // Re-fetch authenticators for the elevation step (now using session cookie)
+        let result = try await SuperuserService.shared.fetchAuthenticators()
+        switch result {
+        case .webAuthn(let challenge, let data):
+            self.pendingSessionLogin = false
+            self.challengeJSON = challenge
+            self.webAuthnData = data
+            self.showWebAuthn = true
+        case .noAuthenticator:
+            try await SuperuserService.shared.elevateSimple(
+                category: selectedCategory,
+                reason: reason
+            )
+            isPresented = false
+            onSuccess()
         }
     }
 
@@ -119,14 +187,28 @@ struct SuperuserAccessView: View {
 
         Task {
             do {
-                try await SuperuserService.shared.elevate(
-                    challengeJSON: challengeJSON,
-                    webAuthnResponse: response,
-                    category: selectedCategory,
-                    reason: reason
-                )
-                isPresented = false
-                onSuccess()
+                if pendingSessionLogin {
+                    // Complete login with 2FA
+                    try await SuperuserService.shared.loginWith2FA(
+                        challengeJSON: challengeJSON,
+                        webAuthnResponse: response
+                    )
+                    self.pendingSessionLogin = false
+                    self.showWebAuthn = false
+
+                    // Session established — proceed to elevation
+                    try await performElevation()
+                } else {
+                    // WebAuthn for superuser elevation
+                    try await SuperuserService.shared.elevate(
+                        challengeJSON: challengeJSON,
+                        webAuthnResponse: response,
+                        category: selectedCategory,
+                        reason: reason
+                    )
+                    isPresented = false
+                    onSuccess()
+                }
             } catch {
                 errorText = error.localizedDescription
                 isAuthenticating = false

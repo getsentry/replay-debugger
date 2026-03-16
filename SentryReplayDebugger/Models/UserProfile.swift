@@ -6,7 +6,7 @@ struct UserProfile: Codable {
     let avatarURL: URL?
     let isSuperuser: Bool
 
-    private static let sentryBase = "https://sentry.io"
+    private static let sentryBase = "https://bv.ngrok.io"
 
     init(from json: [String: Any]) {
         self.name = json["name"] as? String ?? ""

@@ -34,7 +34,7 @@ enum Config {
         Bundle.main.object(forInfoDictionaryKey: "OAUTH_CLIENT_SECRET") as? String ?? ""
     }
 
-    static let oauthAuthorizeURL = "https://sentry.sentry.io/oauth/authorize/"
-    static let oauthTokenURL = "https://sentry.sentry.io/oauth/token/"
+    static let oauthAuthorizeURL = "https://bv.ngrok.io/oauth/authorize/"
+    static let oauthTokenURL = "https://bv.ngrok.io/oauth/token/"
     static let oauthRedirectURI = "sentry-replay-debugger://sentry.io/callback"
 }

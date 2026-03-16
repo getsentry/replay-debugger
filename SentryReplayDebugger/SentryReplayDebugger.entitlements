@@ -10,7 +10,7 @@
 	<true/>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>webcredentials:sentry.io?mode=developer</string>
+		<string>webcredentials:bv.ngrok.io?mode=developer</string>
 	</array>
 	<key>keychain-access-groups</key>
 	<array>

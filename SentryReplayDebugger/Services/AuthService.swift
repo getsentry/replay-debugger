@@ -323,6 +323,7 @@ class AuthService: ObservableObject {
         KeychainHelper.delete(key: Self.refreshTokenKey)
         KeychainHelper.delete(key: Self.tokenExpiryKey)
         KeychainHelper.delete(key: Self.userProfileKey)
+        SuperuserService.clearSessionCookies()
         isAuthenticated = false
         userProfile = nil
         errorMessage = nil

@@ -42,7 +42,7 @@ struct WebAuthnBridgeView: NSViewRepresentable {
             return
         }
 
-        let rpId = map[.text("rpId")]?.textValue ?? "sentry.io"
+        let rpId = map[.text("rpId")]?.textValue ?? "bv.ngrok.io"
 
         guard let challengeValue = map[.text("challenge")] else {
             onError("Missing challenge in data")
@@ -64,31 +64,38 @@ struct WebAuthnBridgeView: NSViewRepresentable {
             return
         }
 
-        let provider = ASAuthorizationSecurityKeyPublicKeyCredentialProvider(relyingPartyIdentifier: rpId)
-        let request = provider.createCredentialAssertionRequest(challenge: challengeData)
+        let allowedCredentialIDs: [Data] = (map[.text("allowCredentials")]?.arrayValue ?? []).compactMap { cred in
+            guard case .map(let credMap) = cred,
+                  let idVal = credMap[.text("id")] else { return nil }
+            switch idVal {
+            case .text(let str): return base64urlDecode(str)
+            case .bytes(let d): return d
+            default: return nil
+            }
+        }
 
-        if let allowCreds = map[.text("allowCredentials")]?.arrayValue {
-            request.allowedCredentials = allowCreds.compactMap { cred in
-                guard case .map(let credMap) = cred else { return nil }
-                let credId: Data?
-                if let idVal = credMap[.text("id")] {
-                    switch idVal {
-                    case .text(let str): credId = base64urlDecode(str)
-                    case .bytes(let d): credId = d
-                    default: credId = nil
-                    }
-                } else {
-                    credId = nil
-                }
-                guard let credId else { return nil }
-                return ASAuthorizationSecurityKeyPublicKeyCredentialDescriptor(
-                    credentialID: credId,
+        // Platform passkey provider (Touch ID / iCloud Keychain)
+        let platformProvider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: rpId)
+        let platformRequest = platformProvider.createCredentialAssertionRequest(challenge: challengeData)
+        if !allowedCredentialIDs.isEmpty {
+            platformRequest.allowedCredentials = allowedCredentialIDs.map {
+                ASAuthorizationPlatformPublicKeyCredentialDescriptor(credentialID: $0)
+            }
+        }
+
+        // Security key provider (hardware keys)
+        let securityKeyProvider = ASAuthorizationSecurityKeyPublicKeyCredentialProvider(relyingPartyIdentifier: rpId)
+        let securityKeyRequest = securityKeyProvider.createCredentialAssertionRequest(challenge: challengeData)
+        if !allowedCredentialIDs.isEmpty {
+            securityKeyRequest.allowedCredentials = allowedCredentialIDs.map {
+                ASAuthorizationSecurityKeyPublicKeyCredentialDescriptor(
+                    credentialID: $0,
                     transports: ASAuthorizationSecurityKeyPublicKeyCredentialDescriptor.Transport.allSupported
                 )
             }
         }
 
-        let controller = ASAuthorizationController(authorizationRequests: [request])
+        let controller = ASAuthorizationController(authorizationRequests: [platformRequest, securityKeyRequest])
         controller.delegate = coordinator
         controller.presentationContextProvider = coordinator
         coordinator.retainedController = controller
@@ -118,17 +125,23 @@ struct WebAuthnBridgeView: NSViewRepresentable {
         }
 
         func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-            guard let credential = authorization.credential as? ASAuthorizationSecurityKeyPublicKeyCredentialAssertion else {
+            if let credential = authorization.credential as? ASAuthorizationPlatformPublicKeyCredentialAssertion {
+                onSuccess(WebAuthnResponse(
+                    keyHandle: base64urlEncode(credential.credentialID),
+                    clientData: base64urlEncode(credential.rawClientDataJSON),
+                    signatureData: base64urlEncode(credential.signature),
+                    authenticatorData: base64urlEncode(credential.rawAuthenticatorData)
+                ))
+            } else if let credential = authorization.credential as? ASAuthorizationSecurityKeyPublicKeyCredentialAssertion {
+                onSuccess(WebAuthnResponse(
+                    keyHandle: base64urlEncode(credential.credentialID),
+                    clientData: base64urlEncode(credential.rawClientDataJSON),
+                    signatureData: base64urlEncode(credential.signature),
+                    authenticatorData: base64urlEncode(credential.rawAuthenticatorData)
+                ))
+            } else {
                 onError("Unexpected credential type")
-                return
             }
-
-            onSuccess(WebAuthnResponse(
-                keyHandle: base64urlEncode(credential.credentialID),
-                clientData: base64urlEncode(credential.rawClientDataJSON),
-                signatureData: base64urlEncode(credential.signature),
-                authenticatorData: base64urlEncode(credential.rawAuthenticatorData)
-            ))
         }
 
         func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {

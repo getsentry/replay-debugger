@@ -9,13 +9,13 @@ struct PaginatedResponse {
 class SentryAPIService: ObservableObject {
     static let shared = SentryAPIService()
 
-    private let baseURL = "https://us.sentry.io/api/0"
+    private let baseURL = "https://bv.ngrok.io/api/0"
     private let session = URLSession.shared
 
     private init() {}
 
     func fetchUserProfile() async throws -> UserProfile {
-        let url = URL(string: "https://sentry.io/oauth/userinfo/")!
+        let url = URL(string: "https://bv.ngrok.io/oauth/userinfo/")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         addStandardHeaders(to: &request)
@@ -38,7 +38,7 @@ class SentryAPIService: ObservableObject {
     }
 
     func fetchIsSuperuser() async -> Bool {
-        let url = URL(string: "https://sentry.io/api/0/users/me/")!
+        let url = URL(string: "https://bv.ngrok.io/api/0/users/me/")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         addStandardHeaders(to: &request)
