@@ -7,12 +7,15 @@ A macOS application for debugging and inspecting Sentry Session Replay data. Vie
 
 ## Features
 
+- **Authentication**: OAuth login via Sentry for secure access
 - **Segment Browser**: View all replay segments with timestamps and metadata
 - **Event Inspector**: Inspect individual replay events with JSON data viewer
 - **HTML Renderer**: Visualize DOM snapshots at any point in the replay
-- **Event Filtering**: Filter by event type, timestamp, and more
-- **Search**: Global search across all segments and events
+- **Event Filtering**: Filter by event type, timestamp, node ID, and more
+- **Search**: Global search across all segments and events with match navigation
 - **Incremental Rendering**: Efficient HTML rendering with DOM mutation support
+- **Segment Export**: Export replay segments for sharing
+- **cURL Import**: Paste cURL commands to load replay data directly
 
 ## Prerequisites
 
@@ -22,21 +25,23 @@ A macOS application for debugging and inspecting Sentry Session Replay data. Vie
 
 ## Configuration
 
-### Sentry Error Tracking
+**For local development**, copy the template config and fill in your values:
 
-The app uses Sentry for error tracking. The DSN is injected at build time and does not need to be committed to the repository.
+```bash
+cp Config.example.xcconfig Config.xcconfig
+```
 
-**For release/CI builds**, set a `SENTRY_DSN` secret in your GitHub repository settings. The build pipeline will automatically bake it into the app bundle.
-
-**For local development**, create a `Config.xcconfig` file in the project root (it is gitignored) and add:
+Then edit `Config.xcconfig` with your actual credentials:
 
 ```
 SENTRY_DSN = https://YOUR_KEY@oNNN.ingest.sentry.io/YOUR_PROJECT_ID
+OAUTH_CLIENT_ID = your-oauth-client-id
+OAUTH_CLIENT_SECRET = your-oauth-client-secret
 ```
 
-You can also set `SENTRY_DSN` as an environment variable in the Xcode scheme (**Edit Scheme > Run > Arguments > Environment Variables**) and the app will pick it up as a fallback.
+**For release/CI builds**, set `SENTRY_DSN`, `OAUTH_CLIENT_ID`, and `OAUTH_CLIENT_SECRET` as secrets in your GitHub repository settings.
 
-The app will run without Sentry if no DSN is configured (it will print a warning in the console).
+The `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_SECRET` are required for Sentry OAuth login. The app will run without Sentry error tracking if no DSN is configured (it will print a warning in the console).
 
 ## Building the Project
 
@@ -134,28 +139,26 @@ chmod +x build.sh
 
 ## Loading Replay Data
 
-### From Sentry URL
+All loading is done via the clipboard. Copy your data, then press `⌘V` or click the **Paste** button in the toolbar. The app auto-detects the format:
 
-1. Launch the app
-2. Paste a Sentry replay URL in the text field at the top
-3. Click "Fetch" or press `⌘R`
+### Sentry URL
+
+Copy a Sentry replay URL to your clipboard and paste it into the app.
 
 Example URL format:
 ```
 https://sentry.io/organizations/YOUR_ORG/replays/YOUR_REPLAY_ID/
 ```
 
-### From Clipboard (JSON)
+### cURL Command
 
-1. Copy replay segment JSON data to your clipboard
-2. Press `⇧⌘V` or click "Load JSON" in the toolbar
-3. The app will parse and display the segments
+Copy a cURL command (e.g., from browser DevTools) that fetches replay segment data and paste it into the app.
 
-### From Debug File (Development)
+### JSON Data
 
-For development/testing, place a `billy.json` file in the project root directory. The app will automatically load it on launch.
+Copy raw replay JSON to your clipboard and paste it into the app.
 
-Supported formats:
+Supported JSON formats:
 - Array of segment objects: `[{segment1}, {segment2}, ...]`
 - Array of event arrays: `[[event1, event2], [event3, event4], ...]`
 - Single segment object: `{segment: {...}}`
@@ -164,9 +167,13 @@ Supported formats:
 
 ### Keyboard Shortcuts
 
-- `⌘R` - Fetch replay from URL
-- `⇧⌘V` - Load JSON from clipboard
+- `⌘V` - Load from clipboard (URL, cURL, or JSON)
 - `⌘F` - Open global search
+- `⌘G` - Next search match
+- `⇧⌘G` - Previous search match
+- `ESC` - Close search
+- `↑` / `↓` - Navigate events
+- `←` / `→` - Navigate segments
 
 ### Filtering Events
 
@@ -200,9 +207,9 @@ Events are flattened across all segments for rendering, with proper handling of 
 
 ### Debug HTML Output
 
-When rendering HTML, the app writes debug output to:
+When rendering HTML, the app writes debug output to the system temporary directory:
 ```
-~/Library/Containers/com.sentry.SentryReplayDebugger/Data/tmp/sentry-replay-debug.html
+$TMPDIR/sentry-replay-debug.html
 ```
 
 This file is automatically opened in your browser on first render.
@@ -211,11 +218,32 @@ This file is automatically opened in your browser on first render.
 
 ```
 SentryReplayDebugger/
-├── Models/              # Data models (ReplaySegment, ReplayEvent)
-├── Views/               # SwiftUI views
-├── Utilities/           # Helper classes (RRWebEventProcessor, etc.)
-├── Services/            # API services (SentryAPIService)
-└── ContentView.swift    # Main app view
+├── Config.swift                    # Build configuration (DSN, OAuth)
+├── ContentView.swift               # Main app view
+├── SentryReplayDebuggerApp.swift   # App entry point
+├── Models/
+│   ├── ReplayModels.swift          # ReplaySegment, ReplayEvent
+│   └── UserProfile.swift           # Sentry user profile
+├── Views/
+│   ├── EmptyStateView.swift        # Empty/onboarding state
+│   ├── HTMLRendererView.swift       # HTML snapshot renderer
+│   ├── HTMLSourceView.swift         # HTML source code viewer
+│   ├── JSONInspectorView.swift      # JSON data inspector
+│   ├── LoginView.swift              # OAuth login
+│   ├── SegmentListView.swift        # Segment/event browser
+│   └── UserAvatarView.swift         # User avatar display
+├── Utilities/
+│   ├── CURLParser.swift             # cURL command parser
+│   ├── DOMNode.swift                # DOM tree representation
+│   ├── HTMLBeautifier.swift         # HTML formatting
+│   ├── RRWebEventProcessor.swift    # rrweb event processing
+│   ├── RRWebHTMLConverter.swift     # rrweb to HTML conversion
+│   ├── SegmentExporter.swift        # Segment export
+│   └── SentryURLParser.swift        # Sentry URL parsing
+└── Services/
+    ├── AuthService.swift            # OAuth authentication
+    ├── KeychainHelper.swift         # Secure credential storage
+    └── SentryAPIService.swift       # Sentry API client
 ```
 
 ## Troubleshooting
