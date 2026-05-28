@@ -16,6 +16,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
 
+      - name: Tool versions
+        run: |
+          xcodebuild -version | head -1
+          xcrun swift-format --version
+          swiftlint version
+
       - name: swift-format (strict)
         run: |
           xcrun swift-format lint --strict --recursive \
