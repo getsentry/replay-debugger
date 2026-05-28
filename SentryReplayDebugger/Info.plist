@@ -21,5 +21,15 @@
 	<string>$(OAUTH_CLIENT_ID)</string>
 	<key>OAUTH_CLIENT_SECRET</key>
 	<string>$(OAUTH_CLIENT_SECRET)</string>
+	<key>SUFeedURL</key>
+	<string>https://github.com/getsentry/replay-debugger/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>v4/R141Vxr6ULifRZiK318lr1EDrNkD0GhCIWn2GzB0=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>SUEnableDownloaderService</key>
+	<true/>
 </dict>
 </plist>

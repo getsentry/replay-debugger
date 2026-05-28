@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		280DC5582EAC0D0000125EB1 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 280DC5572EAC0D0000125EB1 /* Sentry */; };
+		5BCA11E00000000000000001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 5BCA11E00000000000000002 /* Sparkle */; };
 		28651E412E91A7210087E7DD /* HTMLRendererView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28651E402E91A7210087E7DD /* HTMLRendererView.swift */; };
 		28651E432E91A7290087E7DD /* RRWebHTMLConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28651E422E91A7290087E7DD /* RRWebHTMLConverter.swift */; };
 		28651E452E91A9BF0087E7DD /* HTMLBeautifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28651E442E91A9BF0087E7DD /* HTMLBeautifier.swift */; };
@@ -29,6 +30,8 @@
 		A1234567890ABCDEF042 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF043 /* EmptyStateView.swift */; };
 		A1234567890ABCDEF044 /* SegmentExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF045 /* SegmentExporter.swift */; };
 		A1234567890ABCDEF050 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF051 /* AuthService.swift */; };
+		5BCA11E00000000000000010 /* UpdaterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BCA11E00000000000000011 /* UpdaterService.swift */; };
+		5BCA11E00000000000000020 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BCA11E00000000000000021 /* SettingsView.swift */; };
 		A1234567890ABCDEF052 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF053 /* KeychainHelper.swift */; };
 		A1234567890ABCDEF054 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF055 /* LoginView.swift */; };
 		A1234567890ABCDEF070 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF071 /* UserProfile.swift */; };
@@ -80,6 +83,8 @@
 		A1234567890ABCDEF043 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF045 /* SegmentExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentExporter.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF051 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		5BCA11E00000000000000011 /* UpdaterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterService.swift; sourceTree = "<group>"; };
+		5BCA11E00000000000000021 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF053 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF055 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF071 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
@@ -113,6 +118,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				280DC5582EAC0D0000125EB1 /* Sentry in Frameworks */,
+				5BCA11E00000000000000001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,6 +185,7 @@
 				A1234567890ABCDEF037 /* JSONInspectorView.swift */,
 				A1234567890ABCDEF055 /* LoginView.swift */,
 				A1234567890ABCDEF039 /* SegmentListView.swift */,
+				5BCA11E00000000000000021 /* SettingsView.swift */,
 				A1234567890ABCDEF073 /* UserAvatarView.swift */,
 			);
 			path = Views;
@@ -190,6 +197,7 @@
 				A1234567890ABCDEF051 /* AuthService.swift */,
 				A1234567890ABCDEF053 /* KeychainHelper.swift */,
 				A1234567890ABCDEF033 /* SentryAPIService.swift */,
+				5BCA11E00000000000000011 /* UpdaterService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -280,6 +288,7 @@
 			name = SentryReplayDebugger;
 			packageProductDependencies = (
 				280DC5572EAC0D0000125EB1 /* Sentry */,
+				5BCA11E00000000000000002 /* Sparkle */,
 			);
 			productName = SentryReplayDebugger;
 			productReference = A1234567890ABCDEF009 /* SentryReplayDebugger.app */;
@@ -319,6 +328,7 @@
 			mainGroup = A1234567890ABCDEF012;
 			packageReferences = (
 				280DC5562EAC0D0000125EB1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				5BCA11E00000000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			productRefGroup = A1234567890ABCDEF014 /* Products */;
 			projectDirPath = "";
@@ -395,6 +405,8 @@
 				A1234567890ABCDEF042 /* EmptyStateView.swift in Sources */,
 				A1234567890ABCDEF044 /* SegmentExporter.swift in Sources */,
 				A1234567890ABCDEF050 /* AuthService.swift in Sources */,
+				5BCA11E00000000000000010 /* UpdaterService.swift in Sources */,
+				5BCA11E00000000000000020 /* SettingsView.swift in Sources */,
 				A1234567890ABCDEF052 /* KeychainHelper.swift in Sources */,
 				A1234567890ABCDEF054 /* LoginView.swift in Sources */,
 				A1234567890ABCDEF070 /* UserProfile.swift in Sources */,
@@ -754,6 +766,14 @@
 				minimumVersion = 8.0.0;
 			};
 		};
+		5BCA11E00000000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -761,6 +781,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 280DC5562EAC0D0000125EB1 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
+		};
+		5BCA11E00000000000000002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5BCA11E00000000000000003 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
