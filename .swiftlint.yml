@@ -1,0 +1,65 @@
+# SwiftLint configuration.
+#
+# Formatting (indentation, spacing, commas, line breaks, line length) is owned by
+# swift-format via .swift-format. SwiftLint here focuses on code-quality rules and
+# disables anything that would fight the formatter.
+
+included:
+  - SentryReplayDebugger
+  - SentryReplayDebuggerTests
+  - SentryReplayDebuggerUITests
+
+excluded:
+  - build
+  - DerivedData
+  - .build
+
+disabled_rules:
+  # Owned by swift-format — avoid conflicting autofixes.
+  - trailing_comma
+  - opening_brace
+  - colon
+  - comma
+  - vertical_whitespace
+  - statement_position
+  - line_length
+  # Large pre-existing files/types (e.g. ContentView.swift); revisit when split up.
+  - file_length
+  - type_body_length
+  # `let _ = sideEffect()` is the SwiftUI ViewBuilder idiom for inline side effects;
+  # autocorrecting it to `_ = ...` produces code ViewBuilder rejects.
+  - redundant_discardable_let
+
+opt_in_rules:
+  - empty_count
+  - force_unwrapping
+  - explicit_init
+  - closure_spacing
+  - first_where
+  - last_where
+  - sorted_first_last
+  - toggle_bool
+  - unneeded_parentheses_in_closure_argument
+
+# Surface risky patterns without blocking the build.
+force_cast: warning
+force_try: warning
+force_unwrapping: warning
+
+function_body_length:
+  warning: 120
+  error: 400
+
+cyclomatic_complexity:
+  warning: 25
+  error: 50
+
+identifier_name:
+  min_length: 2
+  excluded:
+    - id
+    - x
+    - y
+    - i
+
+reporter: "xcode"

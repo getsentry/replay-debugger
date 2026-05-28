@@ -29,6 +29,7 @@
 		A1234567890ABCDEF040 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF041 /* Config.swift */; };
 		A1234567890ABCDEF042 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF043 /* EmptyStateView.swift */; };
 		A1234567890ABCDEF044 /* SegmentExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF045 /* SegmentExporter.swift */; };
+		A1234567890ABCDEF081 /* ReplayTimestamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF080 /* ReplayTimestamp.swift */; };
 		A1234567890ABCDEF050 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890ABCDEF051 /* AuthService.swift */; };
 		5BCA11E00000000000000010 /* UpdaterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BCA11E00000000000000011 /* UpdaterService.swift */; };
 		5BCA11E00000000000000020 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BCA11E00000000000000021 /* SettingsView.swift */; };
@@ -82,6 +83,7 @@
 		A1234567890ABCDEF041 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF043 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF045 /* SegmentExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentExporter.swift; sourceTree = "<group>"; };
+		A1234567890ABCDEF080 /* ReplayTimestamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplayTimestamp.swift; sourceTree = "<group>"; };
 		A1234567890ABCDEF051 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		5BCA11E00000000000000011 /* UpdaterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterService.swift; sourceTree = "<group>"; };
 		5BCA11E00000000000000021 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -211,6 +213,7 @@
 				28651E422E91A7290087E7DD /* RRWebHTMLConverter.swift */,
 				5FFACDF4DE5646BEAC5276DE /* RRWebEventProcessor.swift */,
 				A1234567890ABCDEF045 /* SegmentExporter.swift */,
+				A1234567890ABCDEF080 /* ReplayTimestamp.swift */,
 				A1234567890ABCDEF035 /* SentryURLParser.swift */,
 			);
 			path = Utilities;
@@ -404,6 +407,7 @@
 				A1234567890ABCDEF040 /* Config.swift in Sources */,
 				A1234567890ABCDEF042 /* EmptyStateView.swift in Sources */,
 				A1234567890ABCDEF044 /* SegmentExporter.swift in Sources */,
+				A1234567890ABCDEF081 /* ReplayTimestamp.swift in Sources */,
 				A1234567890ABCDEF050 /* AuthService.swift in Sources */,
 				5BCA11E00000000000000010 /* UpdaterService.swift in Sources */,
 				5BCA11E00000000000000020 /* SettingsView.swift in Sources */,

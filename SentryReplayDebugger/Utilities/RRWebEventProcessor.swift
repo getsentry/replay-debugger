@@ -32,7 +32,9 @@ struct RRWebEventProcessor {
     ///   - startFromIndex: Optional index of FullSnapshot to start from (default: 0)
     ///   - metaIndex: Optional index of Meta event to process first for viewport dimensions
     /// - Returns: The render state after processing all events up to the target
-    static func processEvents(_ events: [ReplayEvent], upToIndex targetIndex: Int, startFromIndex: Int = 0, metaIndex: Int? = nil) -> RenderState {
+    static func processEvents(
+        _ events: [ReplayEvent], upToIndex targetIndex: Int, startFromIndex: Int = 0, metaIndex: Int? = nil
+    ) -> RenderState {
         var state = RenderState()
 
         // Validate index
@@ -43,7 +45,7 @@ struct RRWebEventProcessor {
         // Process Meta event first if provided (for viewport dimensions)
         if let metaIdx = metaIndex, metaIdx >= 0, metaIdx < events.count {
             let metaEvent = events[metaIdx]
-            if metaEvent.type == 4 { // Verify it's actually a Meta event
+            if metaEvent.type == 4 {  // Verify it's actually a Meta event
                 processEvent(metaEvent, state: &state)
             }
         }
@@ -88,8 +90,9 @@ struct RRWebEventProcessor {
 
         // Validate indices
         guard fromIndex >= 0,
-              toIndex < events.count,
-              fromIndex <= toIndex else {
+            toIndex < events.count,
+            fromIndex <= toIndex
+        else {
             return state
         }
 
@@ -110,24 +113,24 @@ struct RRWebEventProcessor {
 
     private static func processEvent(_ event: ReplayEvent, state: inout RenderState) {
         switch event.type {
-        case 0: // DomContentLoaded
+        case 0:  // DomContentLoaded
             // No-op for rendering
             break
 
-        case 1: // Load
+        case 1:  // Load
             // No-op for rendering
             break
 
-        case 2: // FullSnapshot
+        case 2:  // FullSnapshot
             processFullSnapshot(event, state: &state)
 
-        case 3: // IncrementalSnapshot
+        case 3:  // IncrementalSnapshot
             processIncrementalSnapshot(event, state: &state)
 
-        case 4: // Meta
+        case 4:  // Meta
             processMeta(event, state: &state)
 
-        case 6: // Plugin
+        case 6:  // Plugin
             // Skip for now
             break
 
@@ -149,9 +152,9 @@ struct RRWebEventProcessor {
         }
 
         switch source {
-        case 0: // Mutation
+        case 0:  // Mutation
             processMutation(event, state: &state)
-        case 8: // StyleSheetRule
+        case 8:  // StyleSheetRule
             processStyleSheetRule(event, state: &state)
         default:
             // Other incremental snapshot types not yet implemented
@@ -168,12 +171,14 @@ struct RRWebEventProcessor {
         if let removes = event.data["removes"] as? [[String: Any]] {
             for removeData in removes {
                 guard let nodeId = removeData["id"] as? Int,
-                      let parentId = removeData["parentId"] as? Int else {
+                    let parentId = removeData["parentId"] as? Int
+                else {
                     continue
                 }
 
                 if let nodeToRemove = domTree.findNode(byId: nodeId),
-                   let parent = domTree.findNode(byId: parentId) as? DOMContainerNode {
+                    let parent = domTree.findNode(byId: parentId) as? DOMContainerNode
+                {
                     parent.removeChild(nodeToRemove)
                 }
             }
@@ -187,7 +192,8 @@ struct RRWebEventProcessor {
                 }
 
                 if let textNode = domTree.findNode(byId: nodeId) as? DOMTextNode,
-                   let value = textData["value"] as? String {
+                    let value = textData["value"] as? String
+                {
                     textNode.textContent = value
                 }
             }
@@ -197,7 +203,8 @@ struct RRWebEventProcessor {
         if let attributes = event.data["attributes"] as? [[String: Any]] {
             for attrData in attributes {
                 guard let nodeId = attrData["id"] as? Int,
-                      let attrs = attrData["attributes"] as? [String: Any] else {
+                    let attrs = attrData["attributes"] as? [String: Any]
+                else {
                     continue
                 }
 
@@ -264,7 +271,8 @@ struct RRWebEventProcessor {
                         }
 
                         // Reconstruct style string
-                        elementNode.attributes["style"] = styles.map { "\($0.key): \($0.value)" }.joined(separator: "; ")
+                        elementNode.attributes["style"] = styles.map { "\($0.key): \($0.value)" }.joined(
+                            separator: "; ")
                     }
                 }
             }
@@ -274,8 +282,9 @@ struct RRWebEventProcessor {
         if let adds = event.data["adds"] as? [[String: Any]] {
             for addData in adds {
                 guard let parentId = addData["parentId"] as? Int,
-                      let nodeData = addData["node"] as? [String: Any],
-                      let parent = domTree.findNode(byId: parentId) as? DOMContainerNode else {
+                    let nodeData = addData["node"] as? [String: Any],
+                    let parent = domTree.findNode(byId: parentId) as? DOMContainerNode
+                else {
                     continue
                 }
 
@@ -283,10 +292,12 @@ struct RRWebEventProcessor {
                 if let newNode = RRWebHTMLConverter.buildDOMNode(from: nodeData) {
                     // Handle positioning with previousId or nextId
                     if let previousId = addData["previousId"] as? Int,
-                       let previousNode = domTree.findNode(byId: previousId) {
+                        let previousNode = domTree.findNode(byId: previousId)
+                    {
                         parent.insertAfter(newNode, after: previousNode)
                     } else if let nextId = addData["nextId"] as? Int,
-                              let nextNode = domTree.findNode(byId: nextId) {
+                        let nextNode = domTree.findNode(byId: nextId)
+                    {
                         parent.insertBefore(newNode, before: nextNode)
                     } else {
                         parent.appendChild(newNode)

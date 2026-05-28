@@ -6,7 +6,7 @@ struct HTMLBeautifier {
     static func beautify(_ html: String) -> String {
         var result = ""
         var indentLevel = 0
-        let indentString = "  " // 2 spaces
+        let indentString = "  "  // 2 spaces
 
         // Split by tags
         var currentPos = html.startIndex
@@ -43,9 +43,7 @@ struct HTMLBeautifier {
                     result += "\n"
                 }
                 // Check if it's a self-closing tag or special tag
-                else if trimmedTag.hasSuffix("/>") ||
-                        trimmedTag.hasPrefix("<!") ||
-                        trimmedTag.hasPrefix("<?") {
+                else if trimmedTag.hasSuffix("/>") || trimmedTag.hasPrefix("<!") || trimmedTag.hasPrefix("<?") {
                     result += String(repeating: indentString, count: indentLevel)
                     result += trimmedTag
                     result += "\n"
@@ -58,7 +56,10 @@ struct HTMLBeautifier {
 
                     // Check if it's an inline or void element that shouldn't increase indent
                     let tagName = extractTagName(from: trimmedTag)
-                    let voidElements = Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"])
+                    let voidElements = Set([
+                        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
+                        "track", "wbr",
+                    ])
 
                     if !voidElements.contains(tagName.lowercased()) {
                         indentLevel += 1

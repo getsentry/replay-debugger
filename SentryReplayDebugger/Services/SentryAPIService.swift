@@ -34,22 +34,25 @@ class SentryAPIService: ObservableObject {
     }
 
     func fetchReplaySegments(orgSlug: String, projectId: String, replayId: String) async throws -> [ReplaySegment] {
-        let url = URL(string: "\(baseURL)/projects/\(orgSlug)/\(projectId)/replays/\(replayId)/recording-segments/?download=true&per_page=100")!
+        let url = URL(
+            string:
+                "\(baseURL)/projects/\(orgSlug)/\(projectId)/replays/\(replayId)/recording-segments/?download=true&per_page=100"
+        )!
         NSLog("🌐 Fetching replay segments: \(url.absoluteString)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         addStandardHeaders(to: &request)
-        
+
         if let authToken = await getAuthToken() {
             #if DEBUG
-            NSLog("🔑 Using auth token: \(authToken.prefix(8))...")
+                NSLog("🔑 Using auth token: \(authToken.prefix(8))...")
             #endif
             request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         } else {
             NSLog("⚠️ No auth token available")
         }
-        
+
         let (data, _) = try await performRequest(request)
 
         let jsonObject = try JSONSerialization.jsonObject(with: data)
@@ -79,7 +82,7 @@ class SentryAPIService: ObservableObject {
         guard !segments.isEmpty else { throw APIError.decodingError }
         return segments
     }
-    
+
     private func getAuthToken() async -> String? {
         return await AuthService.shared.validAccessToken()
     }
@@ -132,38 +135,18 @@ class SentryAPIService: ObservableObject {
 
     private func parseEventType(_ value: Any?) -> Int {
         guard let typeValue = value else { return -1 }
-        
+
         if let stringValue = typeValue as? String, let intValue = Int(stringValue) {
             return intValue
         } else if let intValue = typeValue as? Int {
             return intValue
         }
-        
+
         return -1
     }
-    
+
     private func parseTimestamp(from value: Any?) -> Date? {
-        if let timestamp = value as? TimeInterval {
-            // Check if timestamp is in milliseconds
-            // Use a more reasonable threshold: Jan 1, 2020 in seconds (1577836800)
-            if timestamp > 1577836800 {
-                // Could be milliseconds - check if it's way too large for seconds
-                if timestamp > 1577836800000 {
-                    // Definitely milliseconds, convert to seconds
-                    return Date(timeIntervalSince1970: timestamp / 1000)
-                } else {
-                    // Likely seconds (between 2020-2050 range)
-                    return Date(timeIntervalSince1970: timestamp)
-                }
-            } else {
-                // Old timestamp, likely seconds
-                return Date(timeIntervalSince1970: timestamp)
-            }
-        } else if let dateString = value as? String {
-            let formatter = ISO8601DateFormatter()
-            return formatter.date(from: dateString)
-        }
-        return nil
+        ReplayTimestamp.date(from: value)
     }
 
     // MARK: - CURL Command Support
@@ -179,9 +162,10 @@ class SentryAPIService: ObservableObject {
 
         while let cursor = currentCursor {
             #if DEBUG
-            NSLog("📄 Fetching page with cursor: \(cursor)")
+                NSLog("📄 Fetching page with cursor: \(cursor)")
             #endif
-            let response = try await fetchPagedSegments(curlRequest: curlRequest, cursor: cursor, segmentOffset: segmentOffset)
+            let response = try await fetchPagedSegments(
+                curlRequest: curlRequest, cursor: cursor, segmentOffset: segmentOffset)
             allSegments.append(contentsOf: response.segments)
             segmentOffset += response.segments.count
 
@@ -193,12 +177,14 @@ class SentryAPIService: ObservableObject {
         }
 
         #if DEBUG
-        NSLog("✅ Fetched total of \(allSegments.count) segments across all pages")
+            NSLog("✅ Fetched total of \(allSegments.count) segments across all pages")
         #endif
         return allSegments
     }
 
-    private func fetchPagedSegments(curlRequest: CURLRequest, cursor: String, segmentOffset: Int) async throws -> PaginatedResponse {
+    private func fetchPagedSegments(curlRequest: CURLRequest, cursor: String, segmentOffset: Int) async throws
+        -> PaginatedResponse
+    {
         // Build URL with cursor and per_page params
         var urlComponents = URLComponents(url: curlRequest.url, resolvingAgainstBaseURL: false)!
 
@@ -253,13 +239,13 @@ class SentryAPIService: ObservableObject {
 
         guard let outerArray = jsonObject as? [Any] else {
             #if DEBUG
-            NSLog("❌ Expected array, got: \(type(of: jsonObject))")
+                NSLog("❌ Expected array, got: \(type(of: jsonObject))")
             #endif
             throw APIError.decodingError
         }
 
         #if DEBUG
-        NSLog("📦 Response has \(outerArray.count) segments")
+            NSLog("📦 Response has \(outerArray.count) segments")
         #endif
 
         // Parse each segment (which is an array of events)
@@ -268,14 +254,14 @@ class SentryAPIService: ObservableObject {
         for (index, item) in outerArray.enumerated() {
             guard let eventsArray = item as? [[String: Any]] else {
                 #if DEBUG
-                NSLog("⚠️ Segment \(index) is not an array of events, skipping")
+                    NSLog("⚠️ Segment \(index) is not an array of events, skipping")
                 #endif
                 continue
             }
 
             let globalSegmentIndex = segmentOffset + index
             #if DEBUG
-            NSLog("📦 Segment \(globalSegmentIndex) has \(eventsArray.count) events")
+                NSLog("📦 Segment \(globalSegmentIndex) has \(eventsArray.count) events")
             #endif
 
             // Parse events for this segment
@@ -300,7 +286,9 @@ class SentryAPIService: ObservableObject {
         }
 
         #if DEBUG
-        NSLog("✅ Parsed \(segments.count) segments with total of \(segments.reduce(0) { $0 + $1.events(useSortedOrder: false).count }) events")
+            NSLog(
+                "✅ Parsed \(segments.count) segments with total of \(segments.reduce(0) { $0 + $1.events(useSortedOrder: false).count }) events"
+            )
         #endif
 
         return PaginatedResponse(segments: segments, nextCursor: nextCursor, hasMore: hasMore)
@@ -320,7 +308,9 @@ class SentryAPIService: ObservableObject {
 
             if isNext {
                 // Check if results="true" (meaning there are more results)
-                let hasResults = parts.contains(where: { $0.trimmingCharacters(in: .whitespaces).contains("results=\"true\"") })
+                let hasResults = parts.contains(where: {
+                    $0.trimmingCharacters(in: .whitespaces).contains("results=\"true\"")
+                })
 
                 if !hasResults {
                     // No more results, stop pagination
@@ -331,7 +321,8 @@ class SentryAPIService: ObservableObject {
                 for part in parts {
                     let trimmed = part.trimmingCharacters(in: .whitespaces)
                     if trimmed.hasPrefix("cursor=\"") {
-                        let cursorValue = trimmed
+                        let cursorValue =
+                            trimmed
                             .replacingOccurrences(of: "cursor=\"", with: "")
                             .replacingOccurrences(of: "\"", with: "")
                         return (cursorValue, true)
@@ -344,12 +335,11 @@ class SentryAPIService: ObservableObject {
     }
 }
 
-
 enum APIError: Error, LocalizedError {
     case invalidResponse
     case httpError(Int)
     case decodingError
-    
+
     var errorDescription: String? {
         switch self {
         case .invalidResponse:

@@ -35,10 +35,11 @@ struct SentryURLParser {
 
         // Format 1: /organizations/{org}/replays/{id}
         if pathComponents.count >= 4,
-           pathComponents[0] == "organizations",
-           pathComponents[2] == "replays",
-           !pathComponents[1].isEmpty,
-           !pathComponents[3].isEmpty {
+            pathComponents[0] == "organizations",
+            pathComponents[2] == "replays",
+            !pathComponents[1].isEmpty,
+            !pathComponents[3].isEmpty
+        {
             guard let projectId else { throw SentryURLParseError.missingProjectId }
             let orgSlug = pathComponents[1]
             let replayId = pathComponents[3].components(separatedBy: "?").first ?? pathComponents[3]
@@ -47,12 +48,13 @@ struct SentryURLParser {
 
         // Format 2: https://{org}.sentry.io/explore/replays/{id}?project={projectId}
         if let host = url.host,
-           pathComponents.count >= 3,
-           pathComponents[0] == "explore",
-           pathComponents[1] == "replays",
-           !pathComponents[2].isEmpty,
-           let orgSlug = extractOrgFromHost(host),
-           !orgSlug.isEmpty {
+            pathComponents.count >= 3,
+            pathComponents[0] == "explore",
+            pathComponents[1] == "replays",
+            !pathComponents[2].isEmpty,
+            let orgSlug = extractOrgFromHost(host),
+            !orgSlug.isEmpty
+        {
             guard let projectId else { throw SentryURLParseError.missingProjectId }
             let replayId = pathComponents[2].components(separatedBy: "?").first ?? pathComponents[2]
             return SentryURLComponents(orgSlug: orgSlug, projectId: projectId, replayId: replayId)
@@ -70,8 +72,9 @@ struct SentryURLParser {
         let parts = host.split(separator: ".")
         // e.g. "sentry.sentry.io" → ["sentry", "sentry", "io"] → org = "sentry"
         guard parts.count >= 3,
-              parts[parts.count - 1] == "io",
-              parts[parts.count - 2] == "sentry" else {
+            parts[parts.count - 1] == "io",
+            parts[parts.count - 2] == "sentry"
+        else {
             return nil
         }
         let orgParts = parts.dropLast(2)

@@ -133,6 +133,19 @@ xcodebuild build -project SentryReplayDebugger.xcodeproj \
 ### Using Xcode
 Open `SentryReplayDebugger.xcodeproj` in Xcode and build with ⌘B.
 
+## Linting & Formatting
+
+Formatting is owned by **swift-format** (`.swift-format`); code-quality linting by **SwiftLint** (`.swiftlint.yml`). The two are kept non-overlapping so they don't fight. CI (`.github/workflows/lint.yml`) runs both and **fails** on any formatting deviation (`swift-format lint --strict`) or SwiftLint error.
+
+```bash
+scripts/lint.sh         # check formatting + lint (matches CI)
+scripts/lint.sh --fix   # reformat in place and apply SwiftLint autocorrections
+```
+
+Run `scripts/lint.sh --fix` before committing. `swift-format` ships with the Xcode toolchain (`xcrun swift-format`); install SwiftLint via `brew install swiftlint`.
+
+Note: `redundant_discardable_let` is disabled — `let _ = sideEffect()` is the SwiftUI ViewBuilder idiom for inline side effects, and rewriting it to `_ = ...` produces code ViewBuilder rejects.
+
 ## Project Structure
 
 ```

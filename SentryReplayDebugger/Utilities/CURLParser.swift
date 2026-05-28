@@ -17,12 +17,13 @@ class CURLParser {
         "origin",
         "pragma",
         "referer",
-        "user-agent"
+        "user-agent",
     ]
 
     static func parse(curlCommand: String) throws -> CURLRequest {
         // Remove newlines and extra spaces
-        let normalized = curlCommand
+        let normalized =
+            curlCommand
             .replacingOccurrences(of: "\\\n", with: " ")
             .replacingOccurrences(of: "\\", with: "")
             .replacingOccurrences(of: "\n", with: " ")
@@ -47,14 +48,15 @@ class CURLParser {
         // Match URL after 'curl' - handles both quoted and unquoted URLs
         let patterns = [
             "curl\\s+'([^']+)'",  // Single quoted
-            "curl\\s+\"([^\"]+)\"", // Double quoted
-            "curl\\s+([^\\s-][^\\s]+)" // Unquoted (stops at space or dash)
+            "curl\\s+\"([^\"]+)\"",  // Double quoted
+            "curl\\s+([^\\s-][^\\s]+)",  // Unquoted (stops at space or dash)
         ]
 
         for pattern in patterns {
             if let regex = try? NSRegularExpression(pattern: pattern),
-               let match = regex.firstMatch(in: command, range: NSRange(command.startIndex..., in: command)),
-               let urlRange = Range(match.range(at: 1), in: command) {
+                let match = regex.firstMatch(in: command, range: NSRange(command.startIndex..., in: command)),
+                let urlRange = Range(match.range(at: 1), in: command)
+            {
                 let urlString = String(command[urlRange])
                 if let url = URL(string: urlString) {
                     return url
@@ -71,7 +73,7 @@ class CURLParser {
         // Match -H 'header: value' or -H "header: value"
         let patterns = [
             "-H\\s+'([^:]+):\\s*([^']+)'",  // Single quoted
-            "-H\\s+\"([^:]+):\\s*([^\"]+)\"" // Double quoted
+            "-H\\s+\"([^:]+):\\s*([^\"]+)\"",  // Double quoted
         ]
 
         for pattern in patterns {
@@ -80,7 +82,8 @@ class CURLParser {
             let matches = regex.matches(in: command, range: NSRange(command.startIndex..., in: command))
             for match in matches {
                 if let nameRange = Range(match.range(at: 1), in: command),
-                   let valueRange = Range(match.range(at: 2), in: command) {
+                    let valueRange = Range(match.range(at: 2), in: command)
+                {
                     let name = String(command[nameRange]).trimmingCharacters(in: .whitespaces)
                     let value = String(command[valueRange]).trimmingCharacters(in: .whitespaces)
                     headers[name.lowercased()] = value
@@ -99,14 +102,15 @@ class CURLParser {
             "-b\\s+'([^']+)'",
             "-b\\s+\"([^\"]+)\"",
             "--cookie\\s+'([^']+)'",
-            "--cookie\\s+\"([^\"]+)\""
+            "--cookie\\s+\"([^\"]+)\"",
         ]
 
         for pattern in patterns {
             guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
 
             if let match = regex.firstMatch(in: command, range: NSRange(command.startIndex..., in: command)),
-               let cookieRange = Range(match.range(at: 1), in: command) {
+                let cookieRange = Range(match.range(at: 1), in: command)
+            {
                 let cookieString = String(command[cookieRange])
 
                 // Parse cookie string: "name1=value1; name2=value2"

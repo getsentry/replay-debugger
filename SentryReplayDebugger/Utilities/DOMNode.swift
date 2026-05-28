@@ -65,7 +65,8 @@ class DOMContainerNode: DOMNode {
         child.parent = self
 
         if let beforeNode = before,
-           let index = childNodes.firstIndex(where: { $0.id == beforeNode.id }) {
+            let index = childNodes.firstIndex(where: { $0.id == beforeNode.id })
+        {
             childNodes.insert(child, at: index)
         } else {
             childNodes.append(child)
@@ -79,7 +80,8 @@ class DOMContainerNode: DOMNode {
         child.parent = self
 
         if let afterNode = after,
-           let index = childNodes.firstIndex(where: { $0.id == afterNode.id }) {
+            let index = childNodes.firstIndex(where: { $0.id == afterNode.id })
+        {
             childNodes.insert(child, at: index + 1)
         } else {
             childNodes.insert(child, at: 0)
@@ -259,18 +261,23 @@ class DOMElementNode: DOMContainerNode {
         var attrsString = ""
         if !allAttributes.isEmpty {
             let sortedAttrs = allAttributes.sorted { $0.key < $1.key }
-            attrsString = " " + sortedAttrs.map { key, value in
-                // Escape attribute values
-                let escapedValue = value
-                    .replacingOccurrences(of: "&", with: "&amp;")
-                    .replacingOccurrences(of: "\"", with: "&quot;")
-                return "\(key)=\"\(escapedValue)\""
-            }.joined(separator: " ")
+            attrsString =
+                " "
+                + sortedAttrs.map { key, value in
+                    // Escape attribute values
+                    let escapedValue =
+                        value
+                        .replacingOccurrences(of: "&", with: "&amp;")
+                        .replacingOccurrences(of: "\"", with: "&quot;")
+                    return "\(key)=\"\(escapedValue)\""
+                }.joined(separator: " ")
         }
 
         // Void elements (self-closing)
-        let voidElements = ["area", "base", "br", "col", "embed", "hr", "img", "input",
-                           "link", "meta", "param", "source", "track", "wbr"]
+        let voidElements = [
+            "area", "base", "br", "col", "embed", "hr", "img", "input",
+            "link", "meta", "param", "source", "track", "wbr",
+        ]
         if voidElements.contains(tag) {
             return "<\(tag)\(attrsString)>"
         }
@@ -322,7 +329,8 @@ class DOMTextNode: DOMNode {
         }
 
         // Escape HTML entities in regular text
-        return textContent
+        return
+            textContent
             .replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;")

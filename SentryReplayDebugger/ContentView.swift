@@ -113,9 +113,9 @@ struct ContentView: View {
     @State private var timestampFilterText: String = ""
     @State private var timestampFilterValue: String = ""
     @State private var nodeIdFilterText: String = ""
-    @State private var nodeIdFilter: Int? = nil
+    @State private var nodeIdFilter: Int?
     @State private var nodeIdFilterAllReferences: Bool = false
-    @State private var highlightedNodeId: Int? = nil
+    @State private var highlightedNodeId: Int?
     @State private var showHighlightError: Bool = false
     @State private var highlightErrorMessage: String = ""
     @State private var showInspector = false
@@ -132,7 +132,7 @@ struct ContentView: View {
     @State private var currentSearchIndex: Int = 0
     @FocusState private var searchFieldFocused: Bool
     @State private var shouldScrollToSelection: Bool = false
-    @State private var currentSearchMatch: SearchMatch? = nil
+    @State private var currentSearchMatch: SearchMatch?
 
     // Event type counts (computed when filter inspector is shown)
     @State private var eventTypeCounts: [String: Int] = [:]
@@ -160,8 +160,8 @@ struct ContentView: View {
     @State private var filterCacheKey: String = ""
 
     // Performance: Cache displayedSegment lookup
-    @State private var cachedDisplayedSegment: ReplaySegment? = nil
-    @State private var cachedDisplayedSegmentId: String? = nil
+    @State private var cachedDisplayedSegment: ReplaySegment?
+    @State private var cachedDisplayedSegmentId: String?
 
     private var selectedSegments: [ReplaySegment] {
         filteredSegments.filter { selectedSegmentIDs.contains($0.id) }
@@ -255,11 +255,10 @@ struct ContentView: View {
     }
 
     private var currentFilterCacheKey: String {
-        "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map{String($0)}.joined())-\(enabledCustomTags.sorted().joined())-\(timestampFilterOperator)-\(timestampFilterValue)-\(nodeIdFilter?.description ?? "")-\(nodeIdFilterAllReferences)"
+        "\(segments.count)-\(enabledEventTypes.sorted().joined())-\(enabledIncrementalSources.sorted().map { String($0) }.joined())-\(enabledCustomTags.sorted().joined())-\(timestampFilterOperator)-\(timestampFilterValue)-\(nodeIdFilter?.description ?? "")-\(nodeIdFilterAllReferences)"
     }
 
-    private func eventReferencesNode(_ event: ReplayEvent, nodeId: Int, allReferences: Bool) -> Bool
-    {
+    private func eventReferencesNode(_ event: ReplayEvent, nodeId: Int, allReferences: Bool) -> Bool {
         // Recursively search through the event data for any occurrence of the node ID
         func searchForNodeId(in data: Any) -> Bool {
             if let dict = data as? [String: Any] {
@@ -305,8 +304,7 @@ struct ContentView: View {
         return searchForNodeId(in: event.data)
     }
 
-    private func findNodeIdPath(nodeId: Int, in data: Any, currentPath: [String] = []) -> [String]?
-    {
+    private func findNodeIdPath(nodeId: Int, in data: Any, currentPath: [String] = []) -> [String]? {
         if let dict = data as? [String: Any] {
             // Check if this object contains an "id" field matching our target
             if let id = dict["id"] as? Int, id == nodeId {
@@ -1075,7 +1073,7 @@ struct ContentView: View {
                             }
                         }
                     }
-                    .onChange(of: nodeIdFilter) { oldValue, newValue in
+                    .onChange(of: nodeIdFilter) { _, newValue in
                         // Sync text field when filter changes externally (e.g., from context menu)
                         if let newValue = newValue {
                             nodeIdFilterText = String(newValue)
@@ -1108,7 +1106,7 @@ struct ContentView: View {
                                 // Only update filter when user presses Enter
                                 timestampFilterValue = timestampFilterText
                             }
-                            .onChange(of: timestampFilterValue) { oldValue, newValue in
+                            .onChange(of: timestampFilterValue) { _, newValue in
                                 // Sync text field when filter changes externally
                                 if timestampFilterText != newValue {
                                     timestampFilterText = newValue
@@ -1409,8 +1407,7 @@ struct ContentView: View {
                     return newPath
                 }
 
-                if let stringValue = value as? String, stringValue.lowercased().contains(queryLower)
-                {
+                if let stringValue = value as? String, stringValue.lowercased().contains(queryLower) {
                     return newPath
                 }
 
@@ -1694,7 +1691,7 @@ struct ContentView: View {
 
         // Check if clipboard contains a Sentry replay URL
         do {
-            let _ = try SentryURLParser.parse(url: trimmedText)
+            _ = try SentryURLParser.parse(url: trimmedText)
             fetchReplayFromURL(trimmedText)
             return
         } catch let error as SentryURLParseError {
@@ -1703,7 +1700,9 @@ struct ContentView: View {
                 errorMessage = error.localizedDescription
                 return
             }
-        } catch {}
+        } catch {
+            // Not a recognizable Sentry URL; fall through to other clipboard formats.
+        }
 
         // Check if clipboard contains a cURL command
         if trimmedText.lowercased().hasPrefix("curl") {
@@ -1788,27 +1787,7 @@ struct ContentView: View {
     }
 
     private func parseTimestamp(from value: Any?) -> Date? {
-        if let timestamp = value as? TimeInterval {
-            // Check if timestamp is in milliseconds
-            // Use a more reasonable threshold: Jan 1, 2020 in seconds (1577836800)
-            if timestamp > 1_577_836_800 {
-                // Could be milliseconds - check if it's way too large for seconds
-                if timestamp > 1_577_836_800_000 {
-                    // Definitely milliseconds, convert to seconds
-                    return Date(timeIntervalSince1970: timestamp / 1000)
-                } else {
-                    // Likely seconds (between 2020-2050 range)
-                    return Date(timeIntervalSince1970: timestamp)
-                }
-            } else {
-                // Old timestamp, likely seconds
-                return Date(timeIntervalSince1970: timestamp)
-            }
-        } else if let dateString = value as? String {
-            let formatter = ISO8601DateFormatter()
-            return formatter.date(from: dateString)
-        }
-        return nil
+        ReplayTimestamp.date(from: value)
     }
 
     private func parseEventType(_ value: Any?) -> Int {

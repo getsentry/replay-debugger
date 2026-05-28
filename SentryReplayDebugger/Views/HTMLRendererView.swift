@@ -96,13 +96,13 @@ struct HTMLRendererView: View {
     let onHighlightError: (String) -> Void
     @Binding var currentHTML: String?
     @State private var renderState: RRWebEventProcessor.RenderState = RRWebEventProcessor.RenderState()
-    @State private var renderedHTML: String? = nil
+    @State private var renderedHTML: String?
     @State private var error: String?
-    @State private var lastProcessedIndex: Int? = nil
+    @State private var lastProcessedIndex: Int?
     @State private var isProcessing: Bool = false
     @State private var isLoadingNewRender: Bool = false
-    @State private var webView: WKWebView? = nil
-    @State private var highlightFrame: CGRect? = nil
+    @State private var webView: WKWebView?
+    @State private var highlightFrame: CGRect?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -204,7 +204,7 @@ struct HTMLRendererView: View {
 
         // Validate inputs
         guard !events.isEmpty else {
-            return // Don't set error, just wait for valid data
+            return  // Don't set error, just wait for valid data
         }
 
         guard targetIndex >= 0 && targetIndex < events.count else {
@@ -218,7 +218,9 @@ struct HTMLRendererView: View {
         let fullSnapshotIndex = findMostRecentIndex(in: fullSnapshotIndices, before: targetIndex)
         let fsIndex = fullSnapshotIndex ?? 0
 
-        NSLog("🎬 [\(panelId.prefix(8))] processEvents - targetIndex: \(targetIndex), event: \(selectedEvent.id), FS: \(fsIndex), cache size: \(renderStateCache.count)")
+        NSLog(
+            "🎬 [\(panelId.prefix(8))] processEvents - targetIndex: \(targetIndex), event: \(selectedEvent.id), FS: \(fsIndex), cache size: \(renderStateCache.count)"
+        )
 
         // STRATEGY 1: Try cache checkpoint (fastest)
         // Only use checkpoints that are AFTER the FullSnapshot we'll be using
@@ -232,7 +234,9 @@ struct HTMLRendererView: View {
                 // Incremental from checkpoint
                 // Note: No need to copy here - processIncrementalWithCheckpoints will handle copying
                 let distance = targetIndex - checkpointIndex
-                NSLog("📦 [\(panelId.prefix(8))] Loading checkpoint \(checkpointIndex), +\(distance) events to \(targetIndex)")
+                NSLog(
+                    "📦 [\(panelId.prefix(8))] Loading checkpoint \(checkpointIndex), +\(distance) events to \(targetIndex)"
+                )
 
                 let state = processIncrementalWithCheckpoints(
                     from: checkpointIndex,
@@ -254,7 +258,9 @@ struct HTMLRendererView: View {
         // STRATEGY 2: Try incremental from current state
         if let lastIndex = lastProcessedIndex, targetIndex > lastIndex, renderState.domTree != nil {
             let distance = targetIndex - lastIndex
-            NSLog("⚡️ [\(panelId.prefix(8))] Incremental render from \(lastIndex + 1) to \(targetIndex) (\(distance) events)")
+            NSLog(
+                "⚡️ [\(panelId.prefix(8))] Incremental render from \(lastIndex + 1) to \(targetIndex) (\(distance) events)"
+            )
             let state = processIncrementalWithCheckpoints(
                 from: lastIndex,
                 to: targetIndex,
@@ -278,7 +284,9 @@ struct HTMLRendererView: View {
         let reason = lastProcessedIndex == nil ? "initial" : "backward/reset"
 
         if let fsIndex = fullSnapshotIndex {
-            NSLog("🔄 [\(panelId.prefix(8))] Full render (\(reason)) from FullSnapshot at \(fsIndex) to \(targetIndex) (skipping \(fsIndex) events)")
+            NSLog(
+                "🔄 [\(panelId.prefix(8))] Full render (\(reason)) from FullSnapshot at \(fsIndex) to \(targetIndex) (skipping \(fsIndex) events)"
+            )
         } else {
             NSLog("🔄 [\(panelId.prefix(8))] Full render (\(reason)) from 0 to \(targetIndex) (no FullSnapshot found)")
         }
@@ -303,7 +311,7 @@ struct HTMLRendererView: View {
         // Binary search to find the rightmost index <= target
         var left = 0
         var right = indices.count - 1
-        var result: Int? = nil
+        var result: Int?
 
         while left <= right {
             let mid = (left + right) / 2
@@ -321,24 +329,31 @@ struct HTMLRendererView: View {
     }
 
     /// Find nearest cached checkpoint after FullSnapshot and before target index
-    private func findNearestCheckpoint(after fsIndex: Int, before targetIndex: Int) -> (Int, RRWebEventProcessor.RenderState)? {
+    private func findNearestCheckpoint(after fsIndex: Int, before targetIndex: Int) -> (
+        Int, RRWebEventProcessor.RenderState
+    )? {
         let validCheckpoints = renderStateCache.keys
             .filter { $0 > fsIndex && $0 <= targetIndex }
             .sorted()
 
         guard let nearestIndex = validCheckpoints.last,
-              let state = renderStateCache[nearestIndex] else {
+            let state = renderStateCache[nearestIndex]
+        else {
             return nil
         }
 
         let eventsFromFS = nearestIndex - fsIndex
-        NSLog("📍 [\(panelId.prefix(8))] Found checkpoint at \(nearestIndex) (\(eventsFromFS) events from FS at \(fsIndex))")
+        NSLog(
+            "📍 [\(panelId.prefix(8))] Found checkpoint at \(nearestIndex) (\(eventsFromFS) events from FS at \(fsIndex))"
+        )
 
         return (nearestIndex, state)
     }
 
     /// Process events and save checkpoints at FS-relative interval boundaries
-    private func processWithCheckpoints(upToIndex targetIndex: Int, startFromIndex startIndex: Int, metaIndex: Int?) -> RRWebEventProcessor.RenderState {
+    private func processWithCheckpoints(upToIndex targetIndex: Int, startFromIndex startIndex: Int, metaIndex: Int?)
+        -> RRWebEventProcessor.RenderState
+    {
         let eventsFromFS = targetIndex - startIndex
 
         // Calculate how many complete boundaries we'll cross
@@ -346,16 +361,20 @@ struct HTMLRendererView: View {
 
         // If we won't cross any boundaries, just process to target
         if numBoundaries == 0 {
-            return RRWebEventProcessor.processEvents(events, upToIndex: targetIndex, startFromIndex: startIndex, metaIndex: metaIndex)
+            return RRWebEventProcessor.processEvents(
+                events, upToIndex: targetIndex, startFromIndex: startIndex, metaIndex: metaIndex)
         }
 
         // Process to first checkpoint boundary (FS + cacheInterval)
         let firstBoundaryIndex = startIndex + cacheInterval
-        var currentState = RRWebEventProcessor.processEvents(events, upToIndex: firstBoundaryIndex, startFromIndex: startIndex, metaIndex: metaIndex)
+        var currentState = RRWebEventProcessor.processEvents(
+            events, upToIndex: firstBoundaryIndex, startFromIndex: startIndex, metaIndex: metaIndex)
         var currentIndex = firstBoundaryIndex
 
         if currentState.domTree != nil && renderStateCache[firstBoundaryIndex] == nil {
-            NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(firstBoundaryIndex) (\(cacheInterval) events from FS at \(startIndex))")
+            NSLog(
+                "💾 [\(panelId.prefix(8))] Saving checkpoint at \(firstBoundaryIndex) (\(cacheInterval) events from FS at \(startIndex))"
+            )
             renderStateCache[firstBoundaryIndex] = currentState.copy()
         }
 
@@ -374,7 +393,9 @@ struct HTMLRendererView: View {
                 )
 
                 if currentState.domTree != nil && renderStateCache[boundaryIndex] == nil {
-                    NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(boundaryIndex) (\(eventsAtBoundary) events from FS at \(startIndex))")
+                    NSLog(
+                        "💾 [\(panelId.prefix(8))] Saving checkpoint at \(boundaryIndex) (\(eventsAtBoundary) events from FS at \(startIndex))"
+                    )
                     renderStateCache[boundaryIndex] = currentState.copy()
                 }
 
@@ -436,7 +457,9 @@ struct HTMLRendererView: View {
             // Save checkpoint at this boundary
             if currentState.domTree != nil && renderStateCache[nextBoundaryIndex] == nil {
                 let eventsFromFS = nextBoundaryIndex - fsIndex
-                NSLog("💾 [\(panelId.prefix(8))] Saving checkpoint at \(nextBoundaryIndex) (\(eventsFromFS) events from FS at \(fsIndex))")
+                NSLog(
+                    "💾 [\(panelId.prefix(8))] Saving checkpoint at \(nextBoundaryIndex) (\(eventsFromFS) events from FS at \(fsIndex))"
+                )
                 renderStateCache[nextBoundaryIndex] = currentState.copy()
             }
 
@@ -474,7 +497,7 @@ struct HTMLRendererView: View {
             renderStateCache.removeValue(forKey: key)
         }
 
-        if keysToRemove.count > 0 {
+        if !keysToRemove.isEmpty {
             NSLog("🗑️ [\(panelId.prefix(8))] Evicted \(keysToRemove.count) checkpoints before FS at \(cutoffIndex)")
         }
 
@@ -485,7 +508,7 @@ struct HTMLRendererView: View {
             for key in additionalKeysToRemove {
                 renderStateCache.removeValue(forKey: key)
             }
-            if additionalKeysToRemove.count > 0 {
+            if !additionalKeysToRemove.isEmpty {
                 NSLog("🗑️ [\(panelId.prefix(8))] Evicted \(additionalKeysToRemove.count) additional old checkpoints")
             }
         }
@@ -514,18 +537,18 @@ struct HTMLRendererView: View {
         }
 
         let script = """
-        (function() {
-            var element = document.querySelector('[data-rr-id="\(nodeId)"]');
-            if (!element) return null;
-            var rect = element.getBoundingClientRect();
-            return {
-                x: rect.x,
-                y: rect.y,
-                width: rect.width,
-                height: rect.height
-            };
-        })();
-        """
+            (function() {
+                var element = document.querySelector('[data-rr-id="\(nodeId)"]');
+                if (!element) return null;
+                var rect = element.getBoundingClientRect();
+                return {
+                    x: rect.x,
+                    y: rect.y,
+                    width: rect.width,
+                    height: rect.height
+                };
+            })();
+            """
 
         webView.evaluateJavaScript(script) { [self] result, error in
             if let error = error {
@@ -536,10 +559,11 @@ struct HTMLRendererView: View {
             }
 
             guard let dict = result as? [String: CGFloat],
-                  let x = dict["x"],
-                  let y = dict["y"],
-                  let width = dict["width"],
-                  let height = dict["height"] else {
+                let x = dict["x"],
+                let y = dict["y"],
+                let width = dict["width"],
+                let height = dict["height"]
+            else {
                 NSLog("❌ Element not found in rendered HTML")
                 self.onHighlightError("Element with ID \(nodeId) not found in rendered HTML")
                 self.highlightedNodeId = nil
@@ -567,14 +591,15 @@ struct ScaledWebView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let _ = NSLog("📐 ScaledWebView geometry: \(geometry.size), viewport: \(viewportWidth ?? 0)x\(viewportHeight ?? 0)")
+            let _ = NSLog(
+                "📐 ScaledWebView geometry: \(geometry.size), viewport: \(viewportWidth ?? 0)x\(viewportHeight ?? 0)")
 
             if let vpWidth = viewportWidth, let vpHeight = viewportHeight {
                 let _ = NSLog("✓ Rendering with viewport dimensions")
                 // Calculate scale to fit viewport into available space
                 let scaleX = geometry.size.width / vpWidth
                 let scaleY = geometry.size.height / vpHeight
-                let scale = min(scaleX, scaleY, 1.0) // Don't scale up, only down
+                let scale = min(scaleX, scaleY, 1.0)  // Don't scale up, only down
 
                 // Create WebView at actual viewport size
                 WebView(html: html, webView: $webView)
@@ -679,7 +704,10 @@ struct WebView: NSViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate {
         var lastHTML: String = ""
 
-        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        func webView(
+            _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
             // Only allow loading the initial HTML, block all other navigation
             if navigationAction.navigationType == .other {
                 decisionHandler(.allow)
