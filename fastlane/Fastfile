@@ -114,4 +114,80 @@ platform :mac do
     UI.success("Created #{zip_path}.")
   end
 
+  desc "Generate and EdDSA-sign the Sparkle appcast for a release build"
+  lane :generate_appcast do |options|
+    sparkle_version = options[:sparkle_version] || "2.9.2"
+    repo = options[:repo] || "getsentry/replay-debugger"
+    archive_name = options[:archive_name] || "SentryReplayDebugger.zip"
+
+    ed_key = ENV["SPARKLE_PRIVATE_KEY"]
+    UI.user_error!("SPARKLE_PRIVATE_KEY is not set") if ed_key.to_s.strip.empty?
+
+    archive, app_path, feed_dir = Dir.chdir('..') do
+      [
+        File.expand_path(options[:archive] || "build/Release/#{archive_name}"),
+        File.expand_path(options[:app_path] || "build/Release/SentryReplayDebugger.app"),
+        File.expand_path(options[:feed_dir] || "build/appcast")
+      ]
+    end
+
+    UI.user_error!("Archive not found at #{archive}. Build and zip first.") unless File.exist?(archive)
+
+    version = options[:version] ||
+      sh("/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' '#{app_path}/Contents/Info.plist'", log: false).strip
+    download_prefix = "https://github.com/#{repo}/releases/download/#{version}/"
+
+    # SHA-256 of the official Sparkle CLI tools tarball, pinned per version. The tarball is
+    # fetched from a mutable GitHub release URL and then fed the private signing key, so a
+    # swapped upstream asset could exfiltrate the key and sign malicious updates. Verify the
+    # download against this digest (fail closed) before extracting or executing anything.
+    # Each digest below was confirmed to contain binaries byte-identical to the checksum-
+    # verified Swift Package Manager artifact for the same version. When bumping
+    # sparkle_version, add the new digest here.
+    sparkle_tarball_sha256 = {
+      "2.9.2" => "1cb340cbbef04c6c0d162078610c25e2221031d794a3449d89f2f56f4df77c95",
+    }
+    expected_sha = sparkle_tarball_sha256[sparkle_version]
+    UI.user_error!("No pinned SHA-256 for Sparkle #{sparkle_version}; add it to the Fastfile.") if expected_sha.nil?
+
+    # Fetch the Sparkle CLI tools (generate_appcast) pinned to the same version as the SPM dependency.
+    tools_dir = "/tmp/sparkle-tools-#{sparkle_version}"
+    generate_bin = "#{tools_dir}/bin/generate_appcast"
+    unless File.exist?(generate_bin)
+      tarball = "#{tools_dir}/sparkle.tar.xz"
+      sh("mkdir -p '#{tools_dir}'")
+      sh("curl -fsSL -o '#{tarball}' " \
+         "'https://github.com/sparkle-project/Sparkle/releases/download/#{sparkle_version}/Sparkle-#{sparkle_version}.tar.xz'")
+      sh("echo '#{expected_sha}  #{tarball}' | shasum -a 256 -c -")
+      sh("tar -xf '#{tarball}' -C '#{tools_dir}'")
+    end
+
+    # Build a clean feed directory containing the new archive.
+    sh("rm -rf '#{feed_dir}' && mkdir -p '#{feed_dir}'")
+    sh("cp '#{archive}' '#{feed_dir}/'")
+
+    # Best-effort: seed the previously published appcast so prior versions stay in the feed.
+    # generate_appcast preserves existing items even when their archives are absent.
+    sh("curl -fsSL 'https://github.com/#{repo}/releases/latest/download/appcast.xml' " \
+       "-o '#{feed_dir}/appcast.xml.prev' && mv '#{feed_dir}/appcast.xml.prev' '#{feed_dir}/appcast.xml' || " \
+       "rm -f '#{feed_dir}/appcast.xml.prev'; true")
+
+    ed_key_file = "/tmp/sparkle_ed_key_#{Time.now.to_i}"
+    File.write(ed_key_file, ed_key)
+    File.chmod(0600, ed_key_file)
+    begin
+      sh("cat '#{ed_key_file}' | '#{generate_bin}' --ed-key-file - " \
+         "--download-url-prefix '#{download_prefix}' '#{feed_dir}'")
+    ensure
+      File.delete(ed_key_file) if File.exist?(ed_key_file)
+    end
+
+    appcast = "#{feed_dir}/appcast.xml"
+    UI.user_error!("Appcast was not generated at #{appcast}") unless File.exist?(appcast)
+
+    # Place the appcast next to the archive so it is uploaded as a release asset.
+    sh("cp '#{appcast}' '#{File.dirname(archive)}/appcast.xml'")
+    UI.success("Generated appcast for version #{version} (#{download_prefix}#{archive_name})")
+  end
+
 end

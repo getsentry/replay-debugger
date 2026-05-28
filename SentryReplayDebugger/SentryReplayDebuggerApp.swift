@@ -4,6 +4,7 @@ import Sentry
 @main
 struct SentryReplayDebuggerApp: App {
     @StateObject private var authService = AuthService.shared
+    @StateObject private var updater = UpdaterService.shared
 
     init() {
         // Only initialize Sentry if DSN is configured
@@ -39,12 +40,21 @@ struct SentryReplayDebuggerApp: App {
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") {
+                    updater.checkForUpdates()
+                }
+                .disabled(!updater.canCheckForUpdates)
+
                 if authService.isAuthenticated {
                     Button("Sign Out") {
                         authService.logout()
                     }
                 }
             }
+        }
+
+        Settings {
+            SettingsView(updater: updater)
         }
     }
 }

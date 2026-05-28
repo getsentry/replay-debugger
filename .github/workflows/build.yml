@@ -26,6 +26,8 @@ on:
         required: true
       OAUTH_CLIENT_SECRET:
         required: true
+      SPARKLE_PRIVATE_KEY:
+        required: false
 
 permissions:
   contents: read
@@ -78,8 +80,20 @@ jobs:
       - name: Zip app
         run: bundle exec fastlane zip_app zip_path:"${APP_ARCHIVE}"
 
+      # Only generated for notarized (release) builds. Produces build/Release/appcast.xml,
+      # which craft attaches to the GitHub release alongside the zip so Sparkle's
+      # SUFeedURL (releases/latest/download/appcast.xml) resolves to the newest feed.
+      - name: Generate Sparkle appcast
+        if: inputs.notarize
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: bundle exec fastlane generate_appcast
+
       - name: Upload artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ${{ github.sha }}
-          path: ${{ env.APP_ARCHIVE }}
+          path: |
+            ${{ env.APP_ARCHIVE }}
+            build/Release/appcast.xml
+          if-no-files-found: warn
