@@ -1787,27 +1787,7 @@ struct ContentView: View {
     }
 
     private func parseTimestamp(from value: Any?) -> Date? {
-        if let timestamp = value as? TimeInterval {
-            // Check if timestamp is in milliseconds
-            // Use a more reasonable threshold: Jan 1, 2020 in seconds (1577836800)
-            if timestamp > 1_577_836_800 {
-                // Could be milliseconds - check if it's way too large for seconds
-                if timestamp > 1_577_836_800_000 {
-                    // Definitely milliseconds, convert to seconds
-                    return Date(timeIntervalSince1970: timestamp / 1000)
-                } else {
-                    // Likely seconds (between 2020-2050 range)
-                    return Date(timeIntervalSince1970: timestamp)
-                }
-            } else {
-                // Old timestamp, likely seconds
-                return Date(timeIntervalSince1970: timestamp)
-            }
-        } else if let dateString = value as? String {
-            let formatter = ISO8601DateFormatter()
-            return formatter.date(from: dateString)
-        }
-        return nil
+        ReplayTimestamp.date(from: value)
     }
 
     private func parseEventType(_ value: Any?) -> Int {
