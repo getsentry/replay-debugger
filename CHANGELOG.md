@@ -1,3 +1,18 @@
+## 0.2.0
+
+### New Features ✨
+
+- Add custom URL scheme to open replay data from web app by @billyvg in [#28](https://github.com/getsentry/replay-debugger/pull/28)
+
+### Internal Changes 🔧
+
+- Fix .md in ci and update readme by @billyvg in [#27](https://github.com/getsentry/replay-debugger/pull/27)
+- Pin GitHub Actions to full-length commit SHAs by @joshuarli in [#26](https://github.com/getsentry/replay-debugger/pull/26)
+
+### Other
+
+- Add image to README for Sentry Replay Debugger by @billyvg in [#25](https://github.com/getsentry/replay-debugger/pull/25)
+
 ## 0.1.2
 
 - No documented changes.
