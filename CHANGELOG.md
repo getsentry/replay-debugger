@@ -1,3 +1,9 @@
+## 0.2.1
+
+### New Features ✨
+
+- (updates) Add Sparkle auto-update via GitHub release appcast by @billyvg in [#29](https://github.com/getsentry/replay-debugger/pull/29)
+
 ## 0.2.0
 
 ### New Features ✨
