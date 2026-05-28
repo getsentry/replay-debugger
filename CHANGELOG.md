@@ -1,3 +1,7 @@
+## 0.2.3
+
+- Add swift-format/SwiftLint and clean up logging + timestamp parsing by @billyvg in [#31](https://github.com/getsentry/replay-debugger/pull/31)
+
 ## 0.2.2
 
 ### New Features ✨
