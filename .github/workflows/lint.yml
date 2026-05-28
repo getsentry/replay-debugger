@@ -16,9 +16,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
       - name: Tool versions
         run: |
-          xcodebuild -version | head -1
+          xcodebuild -version
           xcrun swift-format --version
           swiftlint version
 
