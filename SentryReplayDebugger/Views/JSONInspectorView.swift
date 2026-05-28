@@ -10,7 +10,7 @@ struct JSONInspectorView: View {
     let searchQuery: String?  // Query to highlight within the value
     @State private var expandedKeys: Set<String> = []
     @State private var largeArrayLimits: [String: Int] = [:]  // Track display limits for large arrays
-    @State private var scrollToKey: String? = nil
+    @State private var scrollToKey: String?
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -60,7 +60,7 @@ struct JSONInspectorView: View {
             }
         }
     }
-    
+
     private func expandTopLevelItems() {
         expandedKeys.removeAll()
         for key in data.keys {
@@ -108,7 +108,13 @@ struct JSONKeyValueView: View {
     let currentPath: [String]
     let searchQuery: String?
 
-    init(key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>, largeArrayLimits: Binding<[String: Int]>, parentKey: String? = nil, rootData: [String: Any], onHighlightElement: ((Int) -> Void)? = nil, onFindInSource: ((Int) -> Void)? = nil, onFilterForNode: ((Int) -> Void)? = nil, onFilterForNodeAllReferences: ((Int) -> Void)? = nil, highlightPath: [String]? = nil, currentPath: [String] = [], searchQuery: String? = nil) {
+    init(
+        key: String, value: Any, level: Int, expandedKeys: Binding<Set<String>>,
+        largeArrayLimits: Binding<[String: Int]>, parentKey: String? = nil, rootData: [String: Any],
+        onHighlightElement: ((Int) -> Void)? = nil, onFindInSource: ((Int) -> Void)? = nil,
+        onFilterForNode: ((Int) -> Void)? = nil, onFilterForNodeAllReferences: ((Int) -> Void)? = nil,
+        highlightPath: [String]? = nil, currentPath: [String] = [], searchQuery: String? = nil
+    ) {
         self.key = key
         self.value = value
         self.level = level
@@ -129,25 +135,25 @@ struct JSONKeyValueView: View {
         guard let highlightPath = highlightPath else { return false }
         return currentPath == highlightPath
     }
-    
+
     private var isExpanded: Bool {
         expandedKeys.contains(keyPath)
     }
-    
+
     private var keyPath: String {
         "\(level)-\(key)"
     }
-    
+
     private var indentation: CGFloat {
-        CGFloat(level * 12) // Smaller indentation like Chrome
+        CGFloat(level * 12)  // Smaller indentation like Chrome
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 0) {
                 // Indentation spacer
                 Color.clear.frame(width: indentation, height: 1)
-                
+
                 // Expand/collapse triangle
                 if isExpandableValue {
                     Button(action: toggleExpansion) {
@@ -160,26 +166,26 @@ struct JSONKeyValueView: View {
                 } else {
                     Color.clear.frame(width: 12, height: 16)
                 }
-                
+
                 // Key name
                 Button(action: isExpandableValue ? toggleExpansion : {}) {
                     HStack(spacing: 0) {
                         Text(key)
-                            .foregroundColor(Color(red: 0.55, green: 0.06, blue: 0.55)) // Purple like Chrome
+                            .foregroundColor(Color(red: 0.55, green: 0.06, blue: 0.55))  // Purple like Chrome
                             .fontWeight(.medium)
-                        
+
                         Text(":")
                             .foregroundColor(Color.black)
-                        
+
                         Text(" ")
                             .foregroundColor(Color.black)
-                        
+
                         if !isExpandableValue {
                             valueText
                         } else {
                             objectPreview
                         }
-                        
+
                         Spacer()
                     }
                 }
@@ -187,7 +193,9 @@ struct JSONKeyValueView: View {
                 .contentShape(Rectangle())
             }
             .frame(height: 16)
-            .background(isHighlighted ? Color.yellow.opacity(0.4) : (isHovered ? Color.black.opacity(0.05) : Color.clear))
+            .background(
+                isHighlighted ? Color.yellow.opacity(0.4) : (isHovered ? Color.black.opacity(0.05) : Color.clear)
+            )
             .onHover { hovering in
                 isHovered = hovering
             }
@@ -223,7 +231,9 @@ struct JSONKeyValueView: View {
                             Button(action: {
                                 onFilterForNodeAllReferences?(idValue)
                             }) {
-                                Label("Filter for all Node References", systemImage: "line.3.horizontal.decrease.circle.fill")
+                                Label(
+                                    "Filter for all Node References",
+                                    systemImage: "line.3.horizontal.decrease.circle.fill")
                             }
                         }
 
@@ -269,18 +279,18 @@ struct JSONKeyValueView: View {
                     }
                 }
             }
-            
+
             // Expanded content
             if isExpanded && isExpandableValue {
                 expandedContent
             }
         }
     }
-    
+
     private var isExpandableValue: Bool {
         value is [String: Any] || value is [Any]
     }
-    
+
     private func toggleExpansion() {
         if isExpanded {
             expandedKeys.remove(keyPath)
@@ -288,22 +298,22 @@ struct JSONKeyValueView: View {
             expandedKeys.insert(keyPath)
         }
     }
-    
+
     private func expandRecursively() {
         expandedKeys.insert(keyPath)
         recursivelyModifyKeys(value: value, currentLevel: level, expand: true)
     }
-    
+
     private func collapseRecursively() {
         expandedKeys.remove(keyPath)
         recursivelyModifyKeys(value: value, currentLevel: level, expand: false)
     }
-    
+
     private func expandLevels(_ levels: Int) {
         expandedKeys.insert(keyPath)
         expandKeysToDepth(value: value, currentLevel: level, currentDepth: 0, maxDepth: levels)
     }
-    
+
     private func recursivelyModifyKeys(value: Any, currentLevel: Int, expand: Bool) {
         if let dict = value as? [String: Any] {
             for (key, nestedValue) in dict {
@@ -331,13 +341,13 @@ struct JSONKeyValueView: View {
             }
         }
     }
-    
+
     private func copyValue() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        
+
         let stringToCopy: String
-        
+
         if let dict = value as? [String: Any] {
             stringToCopy = jsonStringify(dict) ?? String(describing: value)
         } else if let array = value as? [Any] {
@@ -355,15 +365,15 @@ struct JSONKeyValueView: View {
         } else {
             stringToCopy = String(describing: value)
         }
-        
+
         pasteboard.setString(stringToCopy, forType: .string)
     }
-    
+
     private func jsonStringify(_ value: Any) -> String? {
         guard JSONSerialization.isValidJSONObject(value) else {
             return nil
         }
-        
+
         do {
             let data = try JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys])
             return String(data: data, encoding: .utf8)
@@ -371,16 +381,18 @@ struct JSONKeyValueView: View {
             return nil
         }
     }
-    
+
     private func expandKeysToDepth(value: Any, currentLevel: Int, currentDepth: Int, maxDepth: Int) {
         guard currentDepth < maxDepth else { return }
-        
+
         if let dict = value as? [String: Any] {
             for (key, nestedValue) in dict {
                 let nestedPath = "\(currentLevel + 1)-\(key)"
                 if nestedValue is [String: Any] || nestedValue is [Any] {
                     expandedKeys.insert(nestedPath)
-                    expandKeysToDepth(value: nestedValue, currentLevel: currentLevel + 1, currentDepth: currentDepth + 1, maxDepth: maxDepth)
+                    expandKeysToDepth(
+                        value: nestedValue, currentLevel: currentLevel + 1, currentDepth: currentDepth + 1,
+                        maxDepth: maxDepth)
                 }
             }
         } else if let array = value as? [Any] {
@@ -388,19 +400,21 @@ struct JSONKeyValueView: View {
                 let nestedPath = "\(currentLevel + 1)-\(index)"
                 if nestedValue is [String: Any] || nestedValue is [Any] {
                     expandedKeys.insert(nestedPath)
-                    expandKeysToDepth(value: nestedValue, currentLevel: currentLevel + 1, currentDepth: currentDepth + 1, maxDepth: maxDepth)
+                    expandKeysToDepth(
+                        value: nestedValue, currentLevel: currentLevel + 1, currentDepth: currentDepth + 1,
+                        maxDepth: maxDepth)
                 }
             }
         }
     }
-    
+
     @ViewBuilder
     private var valueText: some View {
         HStack(spacing: 4) {
             Text(formattedValue)
                 .foregroundColor(valueColor)
                 .textSelection(.enabled)
-            
+
             if let enumLabel = enumLabelForValue {
                 Text(enumLabel)
                     .font(.system(size: 9))
@@ -410,7 +424,7 @@ struct JSONKeyValueView: View {
                     .foregroundColor(Color.blue)
                     .cornerRadius(3)
             }
-            
+
             if let timestampLabel = timestampLabelForValue {
                 Text(timestampLabel)
                     .font(.system(size: 9))
@@ -422,7 +436,7 @@ struct JSONKeyValueView: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private var objectPreview: some View {
         if let dict = value as? [String: Any] {
@@ -447,7 +461,7 @@ struct JSONKeyValueView: View {
             }
         }
     }
-    
+
     private func generateObjectPreview(_ dict: [String: Any]) -> String {
         // Sort keys by complexity (simpler values first), then alphabetically
         let sortedKeys = dict.keys.sorted { key1, key2 in
@@ -458,7 +472,7 @@ struct JSONKeyValueView: View {
             }
             return key1 < key2
         }
-        
+
         let keys = sortedKeys.prefix(3)
         let previews = keys.map { key in
             let valuePreview = formatValuePreview(dict[key])
@@ -468,7 +482,7 @@ struct JSONKeyValueView: View {
         let suffix = dict.count > 3 ? ", ..." : ""
         return "{\(joinedPreviews)\(suffix)}"
     }
-    
+
     private func getValueComplexity(_ value: Any?) -> Int {
         switch value {
         case is [Any], is [String: Any]:
@@ -477,7 +491,7 @@ struct JSONKeyValueView: View {
             return 0  // Simple (null, numbers, strings, etc.)
         }
     }
-    
+
     private func generateArrayPreview(_ array: [Any]) -> String {
         let items = array.prefix(3)
         let previews = items.map { formatValuePreview($0) }
@@ -485,7 +499,7 @@ struct JSONKeyValueView: View {
         let suffix = array.count > 3 ? ", ..." : ""
         return "[\(joinedPreviews)\(suffix)]"
     }
-    
+
     private func formatValuePreview(_ value: Any?) -> String {
         switch value {
         case let string as String:
@@ -506,7 +520,7 @@ struct JSONKeyValueView: View {
             return String(describing: value ?? "null")
         }
     }
-    
+
     @ViewBuilder
     private var expandedContent: some View {
         if let dict = value as? [String: Any] {
@@ -584,7 +598,7 @@ struct JSONKeyValueView: View {
             }
         }
     }
-    
+
     private var formattedValue: String {
         switch value {
         case let string as String:
@@ -601,45 +615,45 @@ struct JSONKeyValueView: View {
             return String(describing: value)
         }
     }
-    
+
     private var valueColor: Color {
         switch value {
         case is String:
-            return Color(red: 0.76, green: 0.09, blue: 0.09) // Red strings like Chrome
+            return Color(red: 0.76, green: 0.09, blue: 0.09)  // Red strings like Chrome
         case let number as NSNumber:
             if CFGetTypeID(number) == CFBooleanGetTypeID() {
-                return Color(red: 0.13, green: 0.13, blue: 0.94) // Blue booleans
+                return Color(red: 0.13, green: 0.13, blue: 0.94)  // Blue booleans
             }
-            return Color(red: 0.13, green: 0.13, blue: 0.94) // Blue numbers
+            return Color(red: 0.13, green: 0.13, blue: 0.94)  // Blue numbers
         case is NSNull:
-            return Color(red: 0.5, green: 0.5, blue: 0.5) // Gray null
+            return Color(red: 0.5, green: 0.5, blue: 0.5)  // Gray null
         default:
             return Color.black
         }
     }
-    
+
     private var timestampLabelForValue: String? {
         guard key == "timestamp" || key.hasSuffix("Timestamp") else {
             return nil
         }
-        
+
         let timestamp: TimeInterval?
-        
+
         if let doubleValue = value as? Double {
             // Check if it's in milliseconds or seconds
-            if doubleValue > 1577836800000 {
+            if doubleValue > 1_577_836_800_000 {
                 timestamp = doubleValue / 1000
             } else {
                 timestamp = doubleValue
             }
         } else if let intValue = value as? Int {
-            if intValue > 1577836800000 {
+            if intValue > 1_577_836_800_000 {
                 timestamp = TimeInterval(intValue) / 1000
             } else {
                 timestamp = TimeInterval(intValue)
             }
         } else if let stringValue = value as? String, let doubleValue = Double(stringValue) {
-            if doubleValue > 1577836800000 {
+            if doubleValue > 1_577_836_800_000 {
                 timestamp = doubleValue / 1000
             } else {
                 timestamp = doubleValue
@@ -647,28 +661,28 @@ struct JSONKeyValueView: View {
         } else {
             timestamp = nil
         }
-        
+
         guard let timestamp = timestamp else {
             return nil
         }
-        
+
         let date = Date(timeIntervalSince1970: timestamp)
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .medium
-        
+
         let timeString = formatter.string(from: date)
         let milliseconds = Int((timestamp.truncatingRemainder(dividingBy: 1)) * 1000)
-        
+
         return "\(timeString).\(String(format: "%03d", milliseconds))"
     }
-    
+
     private var enumLabelForValue: String? {
         // Map various enum properties based on context
         if key == "source" && level == 0 {
             return incrementalSourceEnumName()
         }
-        
+
         // For nested properties, we need to check the parent context
         if key == "type" && level == 0 {
             // Check if this is MouseInteraction data (source = 2)
@@ -684,14 +698,14 @@ struct JSONKeyValueView: View {
                 return canvasContextEnumName()
             }
         }
-        
+
         if key == "pointerType" && level == 0 {
             return pointerTypeEnumName()
         }
-        
+
         return nil
     }
-    
+
     private func getNumericValue() -> Int? {
         if let stringValue = value as? String, let intValue = Int(stringValue) {
             return intValue
@@ -707,17 +721,18 @@ struct JSONKeyValueView: View {
         if let intValue = value as? Int {
             return intValue
         } else if let stringValue = value as? String,
-                  let intValue = Int(stringValue) {
+            let intValue = Int(stringValue)
+        {
             return intValue
         } else if let numberValue = value as? NSNumber {
             return numberValue.intValue
         }
         return nil
     }
-    
+
     private func incrementalSourceEnumName() -> String? {
         guard let sourceNumber = getNumericValue() else { return nil }
-        
+
         // Map to rrweb IncrementalSource enum
         switch sourceNumber {
         case 0: return "Mutation"
@@ -740,10 +755,10 @@ struct JSONKeyValueView: View {
         default: return nil
         }
     }
-    
+
     private func mouseInteractionEnumName() -> String? {
         guard let typeNumber = getNumericValue() else { return nil }
-        
+
         // Map to rrweb MouseInteractions enum
         switch typeNumber {
         case 0: return "MouseUp"
@@ -760,10 +775,10 @@ struct JSONKeyValueView: View {
         default: return nil
         }
     }
-    
+
     private func pointerTypeEnumName() -> String? {
         guard let typeNumber = getNumericValue() else { return nil }
-        
+
         // Map to rrweb PointerTypes enum
         switch typeNumber {
         case 0: return "Mouse"
@@ -772,10 +787,10 @@ struct JSONKeyValueView: View {
         default: return nil
         }
     }
-    
+
     private func canvasContextEnumName() -> String? {
         guard let contextNumber = getNumericValue() else { return nil }
-        
+
         // Map to rrweb CanvasContext enum
         switch contextNumber {
         case 0: return "2D"
@@ -884,13 +899,16 @@ struct ArrayChunkView: View {
 #Preview {
     @Previewable @State var largeArray = (0..<3000).map { $0 }
 
-    JSONInspectorView(data: [
-        "type": "click",
-        "timestamp": 1641234567,
-        "coordinates": ["x": 100, "y": 200],
-        "metadata": ["browser": "Chrome", "version": "98.0"],
-        "active": true,
-        "largeArray": largeArray
-    ], onHighlightElement: nil, onFindInSource: nil, onFilterForNode: nil, onFilterForNodeAllReferences: nil, highlightPath: nil, searchQuery: nil)
+    JSONInspectorView(
+        data: [
+            "type": "click",
+            "timestamp": 1_641_234_567,
+            "coordinates": ["x": 100, "y": 200],
+            "metadata": ["browser": "Chrome", "version": "98.0"],
+            "active": true,
+            "largeArray": largeArray,
+        ], onHighlightElement: nil, onFindInSource: nil, onFilterForNode: nil, onFilterForNodeAllReferences: nil,
+        highlightPath: nil, searchQuery: nil
+    )
     .frame(width: 400, height: 300)
 }

@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import SentryReplayDebugger
 
 final class RRWebHTMLConverterTests: XCTestCase {
@@ -35,7 +36,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         let nodeData: [String: Any] = [
             "type": 0,
             "id": 1,
-            "childNodes": []
+            "childNodes": [],
         ]
         let event = ReplayEvent(id: "1", type: 2, timestamp: now, data: ["node": nodeData])
 
@@ -54,7 +55,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         let nodeData: [String: Any] = [
             "type": 0,
             "id": 1,
-            "childNodes": []
+            "childNodes": [],
         ]
         let event = ReplayEvent(id: "1", type: 2, timestamp: now, data: ["data": ["node": nodeData]])
 
@@ -77,7 +78,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "id": 1,
             "tagName": "div",
             "attributes": [:],
-            "childNodes": []
+            "childNodes": [],
         ]
         let event = ReplayEvent(id: "1", type: 2, timestamp: now, data: ["node": nodeData])
 
@@ -109,7 +110,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         let nodeData: [String: Any] = [
             "type": 0,
             "id": 1,
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -128,12 +129,12 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "id": 2,
             "tagName": "div",
             "attributes": [:],
-            "childNodes": []
+            "childNodes": [],
         ]
         let nodeData: [String: Any] = [
             "type": 0,
             "id": 1,
-            "childNodes": [childData]
+            "childNodes": [childData],
         ]
 
         // When
@@ -154,7 +155,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "id": 1,
             "name": "html",
             "publicId": "",
-            "systemId": ""
+            "systemId": "",
         ]
 
         // When
@@ -171,7 +172,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         // Given - Missing optional fields
         let nodeData: [String: Any] = [
             "type": 1,
-            "id": 1
+            "id": 1,
         ]
 
         // When
@@ -193,7 +194,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "id": 1,
             "tagName": "div",
             "attributes": [:],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -213,9 +214,9 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "tagName": "div",
             "attributes": [
                 "class": "container",
-                "id": "main"
+                "id": "main",
             ],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -234,7 +235,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "tagName": "svg",
             "attributes": [:],
             "isSVG": true,
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -252,7 +253,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "id": 1,
             "tagName": "div",
             "attributes": ["rr_width": "100"],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -271,7 +272,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "id": 1,
             "tagName": "div",
             "attributes": ["rr_height": 200],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -291,9 +292,9 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "tagName": "div",
             "attributes": [
                 "rr_width": "100",
-                "rr_height": "200"
+                "rr_height": "200",
             ],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -314,7 +315,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "attributes": [
                 "_cssText": ".class { color: red; }"
             ],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -338,7 +339,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "attributes": [
                 "_cssText": ".test { background: blue; }"
             ],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -361,7 +362,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "attributes": [
                 "disabled": true as Any
             ],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -382,7 +383,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "attributes": [
                 "maxlength": 100
             ],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -398,7 +399,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "type": 2,
             "id": 1,
             "attributes": [:],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -415,7 +416,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         let nodeData: [String: Any] = [
             "type": 3,
             "id": 1,
-            "textContent": "Hello World"
+            "textContent": "Hello World",
         ]
 
         // When
@@ -433,7 +434,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "type": 3,
             "id": 1,
             "textContent": ".class { color: red; }",
-            "isStyle": true
+            "isStyle": true,
         ]
 
         // When
@@ -448,7 +449,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         // Given - No textContent
         let nodeData: [String: Any] = [
             "type": 3,
-            "id": 1
+            "id": 1,
         ]
 
         // When
@@ -465,7 +466,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         let nodeData: [String: Any] = [
             "type": 5,
             "id": 1,
-            "textContent": "This is a comment"
+            "textContent": "This is a comment",
         ]
 
         // When
@@ -480,7 +481,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         // Given - No textContent
         let nodeData: [String: Any] = [
             "type": 5,
-            "id": 1
+            "id": 1,
         ]
 
         // When
@@ -496,7 +497,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         // Given
         let nodeData: [String: Any] = [
             "type": 4,
-            "id": 1
+            "id": 1,
         ]
 
         // When
@@ -513,7 +514,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
         // Given - Invalid type
         let nodeData: [String: Any] = [
             "type": 99,
-            "id": 1
+            "id": 1,
         ]
 
         // When
@@ -542,7 +543,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "type": 2,
             "tagName": "div",
             "attributes": [:],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -568,7 +569,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
                     "id": 3,
                     "tagName": "head",
                     "attributes": [:],
-                    "childNodes": []
+                    "childNodes": [],
                 ],
                 [
                     "type": 2,
@@ -585,19 +586,19 @@ final class RRWebHTMLConverterTests: XCTestCase {
                                 [
                                     "type": 3,
                                     "id": 6,
-                                    "textContent": "Hello World"
+                                    "textContent": "Hello World",
                                 ]
-                            ]
+                            ],
                         ]
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ]
 
         let documentData: [String: Any] = [
             "type": 0,
             "id": 1,
-            "childNodes": [htmlNodeData]
+            "childNodes": [htmlNodeData],
         ]
 
         // When
@@ -626,16 +627,16 @@ final class RRWebHTMLConverterTests: XCTestCase {
                     "id": 1,
                     "name": "html",
                     "publicId": "",
-                    "systemId": ""
+                    "systemId": "",
                 ],
                 [
                     "type": 2,
                     "id": 2,
                     "tagName": "html",
                     "attributes": [:],
-                    "childNodes": []
-                ]
-            ]
+                    "childNodes": [],
+                ],
+            ],
         ]
 
         // When
@@ -657,9 +658,9 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "tagName": "div",
             "attributes": [
                 "style": "width: 50px; color: red",
-                "rr_width": "100"
+                "rr_width": "100",
             ],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         // When
@@ -681,7 +682,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "attributes": [
                 "rr_width": "100"
             ],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         let node = RRWebHTMLConverter.buildDOMNode(from: nodeData) as? DOMElementNode
@@ -697,7 +698,7 @@ final class RRWebHTMLConverterTests: XCTestCase {
             "attributes": [
                 "style": "width: 50%"
             ],
-            "childNodes": []
+            "childNodes": [],
         ]
 
         let node = RRWebHTMLConverter.buildDOMNode(from: nodeData) as? DOMElementNode

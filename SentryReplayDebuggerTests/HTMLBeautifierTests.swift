@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import SentryReplayDebugger
 
 final class HTMLBeautifierTests: XCTestCase {
@@ -39,7 +40,7 @@ final class HTMLBeautifierTests: XCTestCase {
         let lines = result.split(separator: "\n", omittingEmptySubsequences: false)
 
         XCTAssertTrue(lines[0].contains("<div>"))
-        XCTAssertTrue(lines[1].contains("  <span>")) // Should be indented
+        XCTAssertTrue(lines[1].contains("  <span>"))  // Should be indented
         XCTAssertTrue(lines[2].contains("  </span>"))
         XCTAssertTrue(lines[3].contains("</div>"))
     }
@@ -153,8 +154,10 @@ final class HTMLBeautifierTests: XCTestCase {
 
     func testBeautify_AllVoidElements() {
         // Test all void elements maintain same indent level
-        let voidTags = ["area", "base", "br", "col", "embed", "hr", "img", "input",
-                       "link", "meta", "param", "source", "track", "wbr"]
+        let voidTags = [
+            "area", "base", "br", "col", "embed", "hr", "img", "input",
+            "link", "meta", "param", "source", "track", "wbr",
+        ]
 
         for tag in voidTags {
             let html = "<div><\(tag)></div>"
@@ -261,7 +264,8 @@ final class HTMLBeautifierTests: XCTestCase {
 
     func testBeautify_CompleteHTMLDocument() {
         // Given
-        let html = "<!DOCTYPE html><html><head><title>Test</title></head><body><div class=\"container\"><h1>Title</h1><p>Paragraph</p></div></body></html>"
+        let html =
+            "<!DOCTYPE html><html><head><title>Test</title></head><body><div class=\"container\"><h1>Title</h1><p>Paragraph</p></div></body></html>"
 
         // When
         let result = HTMLBeautifier.beautify(html)
@@ -445,7 +449,8 @@ final class HTMLBeautifierTests: XCTestCase {
 
     func testBeautify_Card() {
         // Given
-        let html = "<div class=\"card\"><div class=\"card-header\"><h3>Title</h3></div><div class=\"card-body\"><p>Content</p></div></div>"
+        let html =
+            "<div class=\"card\"><div class=\"card-header\"><h3>Title</h3></div><div class=\"card-body\"><p>Content</p></div></div>"
 
         // When
         let result = HTMLBeautifier.beautify(html)

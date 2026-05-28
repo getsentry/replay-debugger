@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import SentryReplayDebugger
 
 final class DOMDocumentNodeTests: XCTestCase {
@@ -244,8 +245,10 @@ final class DOMElementNodeTests: XCTestCase {
 
     func testToHTML_VoidElements() {
         // Test all void elements
-        let voidTags = ["area", "base", "br", "col", "embed", "hr", "img", "input",
-                       "link", "meta", "param", "source", "track", "wbr"]
+        let voidTags = [
+            "area", "base", "br", "col", "embed", "hr", "img", "input",
+            "link", "meta", "param", "source", "track", "wbr",
+        ]
 
         for tag in voidTags {
             let element = DOMElementNode(id: 1, tagName: tag)
@@ -683,12 +686,12 @@ final class DOMTreeIntegrationTests: XCTestCase {
         XCTAssertEqual(div.childNodes.count, 1)
 
         // Verify HTML output
-        let html_output = doc.toHTML()
-        XCTAssertTrue(html_output.contains("<!DOCTYPE html>"))
-        XCTAssertTrue(html_output.contains("<html"))
-        XCTAssertTrue(html_output.contains("<body"))
-        XCTAssertTrue(html_output.contains("class=\"container\""))
-        XCTAssertTrue(html_output.contains("Hello World"))
+        let htmlOutput = doc.toHTML()
+        XCTAssertTrue(htmlOutput.contains("<!DOCTYPE html>"))
+        XCTAssertTrue(htmlOutput.contains("<html"))
+        XCTAssertTrue(htmlOutput.contains("<body"))
+        XCTAssertTrue(htmlOutput.contains("class=\"container\""))
+        XCTAssertTrue(htmlOutput.contains("Hello World"))
     }
 
     func testDeepCopy_CompleteTree() {

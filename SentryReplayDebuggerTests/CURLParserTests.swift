@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import SentryReplayDebugger
 
 final class CURLParserTests: XCTestCase {
@@ -91,11 +92,11 @@ final class CURLParserTests: XCTestCase {
     func testParse_MultipleHeaders() throws {
         // Given
         let curl = """
-        curl 'https://api.sentry.io/test' \
-        -H 'accept: application/json' \
-        -H 'content-type: application/json' \
-        -H 'user-agent: Mozilla/5.0'
-        """
+            curl 'https://api.sentry.io/test' \
+            -H 'accept: application/json' \
+            -H 'content-type: application/json' \
+            -H 'user-agent: Mozilla/5.0'
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)
@@ -110,12 +111,12 @@ final class CURLParserTests: XCTestCase {
     func testParse_FilteredHeaders_OnlyAllowed() throws {
         // Given
         let curl = """
-        curl 'https://api.sentry.io/test' \
-        -H 'accept: application/json' \
-        -H 'authorization: Bearer token123' \
-        -H 'user-agent: Mozilla/5.0' \
-        -H 'x-custom-header: custom-value'
-        """
+            curl 'https://api.sentry.io/test' \
+            -H 'accept: application/json' \
+            -H 'authorization: Bearer token123' \
+            -H 'user-agent: Mozilla/5.0' \
+            -H 'x-custom-header: custom-value'
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)
@@ -131,16 +132,16 @@ final class CURLParserTests: XCTestCase {
     func testParse_AllAllowedHeaders() throws {
         // Given
         let curl = """
-        curl 'https://api.sentry.io/test' \
-        -H 'accept: */*' \
-        -H 'accept-language: en-US' \
-        -H 'cache-control: no-cache' \
-        -H 'content-type: application/json' \
-        -H 'origin: https://sentry.io' \
-        -H 'pragma: no-cache' \
-        -H 'referer: https://sentry.io/page' \
-        -H 'user-agent: Mozilla/5.0'
-        """
+            curl 'https://api.sentry.io/test' \
+            -H 'accept: */*' \
+            -H 'accept-language: en-US' \
+            -H 'cache-control: no-cache' \
+            -H 'content-type: application/json' \
+            -H 'origin: https://sentry.io' \
+            -H 'pragma: no-cache' \
+            -H 'referer: https://sentry.io/page' \
+            -H 'user-agent: Mozilla/5.0'
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)
@@ -171,11 +172,11 @@ final class CURLParserTests: XCTestCase {
     func testParse_HeaderCaseInsensitive() throws {
         // Given
         let curl = """
-        curl 'https://api.sentry.io/test' \
-        -H 'Accept: application/json' \
-        -H 'Content-Type: text/html' \
-        -H 'USER-AGENT: Mozilla/5.0'
-        """
+            curl 'https://api.sentry.io/test' \
+            -H 'Accept: application/json' \
+            -H 'Content-Type: text/html' \
+            -H 'USER-AGENT: Mozilla/5.0'
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)
@@ -228,8 +229,8 @@ final class CURLParserTests: XCTestCase {
     func testParse_FilteredCookies_OnlySentryAndSession() throws {
         // Given
         let curl = """
-        curl 'https://api.sentry.io/test' -b 'session=abc; sentry-auth=token; other=value; sentry-user=user123'
-        """
+            curl 'https://api.sentry.io/test' -b 'session=abc; sentry-auth=token; other=value; sentry-user=user123'
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)
@@ -273,11 +274,11 @@ final class CURLParserTests: XCTestCase {
     func testParse_MultilineCURL_WithBackslashes() throws {
         // Given
         let curl = """
-        curl 'https://api.sentry.io/api/0/test' \
-        -H 'accept: application/json' \
-        -H 'user-agent: Mozilla/5.0' \
-        -b 'session=abc123; sentry-auth=token456'
-        """
+            curl 'https://api.sentry.io/api/0/test' \
+            -H 'accept: application/json' \
+            -H 'user-agent: Mozilla/5.0' \
+            -b 'session=abc123; sentry-auth=token456'
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)
@@ -291,11 +292,11 @@ final class CURLParserTests: XCTestCase {
     func testParse_MultilineCURL_WithNewlines() throws {
         // Given
         let curl = """
-        curl 'https://api.sentry.io/api/0/test'
-        -H 'accept: application/json'
-        -H 'content-type: application/json'
-        -b 'session=xyz'
-        """
+            curl 'https://api.sentry.io/api/0/test'
+            -H 'accept: application/json'
+            -H 'content-type: application/json'
+            -b 'session=xyz'
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)
@@ -311,23 +312,24 @@ final class CURLParserTests: XCTestCase {
     func testParse_CompleteRealWorldCURL() throws {
         // Given
         let curl = """
-        curl 'https://sentry.io/api/0/organizations/test-org/replays/abc123/segments/' \
-        -H 'accept: */*' \
-        -H 'accept-language: en-US,en;q=0.9' \
-        -H 'authorization: Bearer secret-token' \
-        -H 'cache-control: no-cache' \
-        -H 'content-type: application/json' \
-        -H 'origin: https://sentry.io' \
-        -H 'referer: https://sentry.io/organizations/test-org/replays/abc123/' \
-        -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' \
-        -b 'session=abc123; sentry-auth=token456; _ga=GA1.2.123456; other-cookie=value'
-        """
+            curl 'https://sentry.io/api/0/organizations/test-org/replays/abc123/segments/' \
+            -H 'accept: */*' \
+            -H 'accept-language: en-US,en;q=0.9' \
+            -H 'authorization: Bearer secret-token' \
+            -H 'cache-control: no-cache' \
+            -H 'content-type: application/json' \
+            -H 'origin: https://sentry.io' \
+            -H 'referer: https://sentry.io/organizations/test-org/replays/abc123/' \
+            -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' \
+            -b 'session=abc123; sentry-auth=token456; _ga=GA1.2.123456; other-cookie=value'
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)
 
         // Then
-        XCTAssertEqual(result.url.absoluteString, "https://sentry.io/api/0/organizations/test-org/replays/abc123/segments/")
+        XCTAssertEqual(
+            result.url.absoluteString, "https://sentry.io/api/0/organizations/test-org/replays/abc123/segments/")
 
         // Should have filtered headers (no authorization)
         XCTAssertEqual(result.headers.count, 7)
@@ -409,11 +411,11 @@ final class CURLParserTests: XCTestCase {
     func testParse_HeadersAndCookies_AllFiltered() throws {
         // Given - All headers and cookies should be filtered out
         let curl = """
-        curl 'https://api.sentry.io/test' \
-        -H 'x-custom: value' \
-        -H 'authorization: Bearer token' \
-        -b 'ga=123; other=value'
-        """
+            curl 'https://api.sentry.io/test' \
+            -H 'x-custom: value' \
+            -H 'authorization: Bearer token' \
+            -b 'ga=123; other=value'
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)
@@ -426,10 +428,10 @@ final class CURLParserTests: XCTestCase {
     func testParse_DoubleQuotedMixed() throws {
         // Given - Mix of single and double quotes
         let curl = """
-        curl "https://api.sentry.io/test" \
-        -H "accept: application/json" \
-        -b "session=abc123"
-        """
+            curl "https://api.sentry.io/test" \
+            -H "accept: application/json" \
+            -b "session=abc123"
+            """
 
         // When
         let result = try CURLParser.parse(curlCommand: curl)

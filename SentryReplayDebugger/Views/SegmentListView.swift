@@ -7,7 +7,7 @@ struct SegmentListView: View {
     @State private var useSortedOrder = true
     @State private var segmentColumnWidth: CGFloat?
     @State private var eventColumnWidth: CGFloat?
-    
+
     private var totalSegmentsDuration: String? {
         guard !segments.isEmpty else { return nil }
 
@@ -17,19 +17,21 @@ struct SegmentListView: View {
         }
 
         guard let firstTimestamp = allTimestamps.min(),
-              let lastTimestamp = allTimestamps.max(),
-              firstTimestamp != lastTimestamp else {
+            let lastTimestamp = allTimestamps.max(),
+            firstTimestamp != lastTimestamp
+        else {
             return nil
         }
 
         return formatDuration(lastTimestamp.timeIntervalSince(firstTimestamp))
     }
-    
+
     private func eventsDuration(for segment: ReplaySegment) -> String? {
         let events = segment.events(useSortedOrder: useSortedOrder)
         guard events.count > 1,
-              let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
-              let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }) else {
+            let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
+            let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp })
+        else {
             return nil
         }
 
@@ -57,22 +59,22 @@ struct SegmentListView: View {
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
         formatter.dateStyle = .none
-        
+
         let timeString = formatter.string(from: date)
         let milliseconds = Int((date.timeIntervalSince1970.truncatingRemainder(dividingBy: 1)) * 1000)
-        
+
         return "\(timeString).\(String(format: "%03d", milliseconds))"
     }
-    
+
     var body: some View {
         HSplitView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .center) {
                     Text("Segments (\(segments.count))")
                         .font(.headline)
-                    
+
                     Spacer()
-                    
+
                     if let totalDuration = totalSegmentsDuration {
                         Text(totalDuration)
                             .font(.caption)
@@ -82,7 +84,7 @@ struct SegmentListView: View {
                 .frame(height: 44)
                 .padding(.leading, 8)
                 .padding(.trailing, 16)
-                
+
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(Array(segments.enumerated()), id: \.element.id) { index, segment in
@@ -108,15 +110,15 @@ struct SegmentListView: View {
                 .accessibilityIdentifier("segments-scroll-view")
             }
             .frame(width: segmentColumnWidth ?? 200)
-            
+
             VStack(alignment: .leading, spacing: 0) {
                 if let selectedSegment = selectedSegment {
                     HStack(alignment: .center) {
                         Text("Events (\(selectedSegment.events(useSortedOrder: useSortedOrder).count))")
                             .font(.headline)
-                        
+
                         Spacer()
-                        
+
                         // Sort toggle button
                         if selectedSegment.wasResorted {
                             Button(action: {
@@ -138,7 +140,7 @@ struct SegmentListView: View {
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("sort-toggle-button")
                         }
-                        
+
                         if let eventsDuration = eventsDuration(for: selectedSegment) {
                             Text(eventsDuration)
                                 .font(.caption)
@@ -147,19 +149,21 @@ struct SegmentListView: View {
                     }
                     .frame(height: 44)
                     .padding(.horizontal, 16)
-                    
+
                     // OPTIMIZATION: Cache enumerated array to avoid recreating on every render
                     let events = selectedSegment.events(useSortedOrder: useSortedOrder)
                     let eventsArray = Array(events.enumerated())
 
                     List(eventsArray, id: \.element.id) { index, event in
                         let previousEvent = index > 0 ? events[index - 1] : nil
-                        EventRowView(event: event, isSelected: selectedEvent?.id == event.id, previousEvent: previousEvent)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedEvent = event
-                            }
-                            .accessibilityIdentifier("event-row-\(event.id)")
+                        EventRowView(
+                            event: event, isSelected: selectedEvent?.id == event.id, previousEvent: previousEvent
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedEvent = event
+                        }
+                        .accessibilityIdentifier("event-row-\(event.id)")
                     }
                     .accessibilityIdentifier("events-list")
                 } else {
@@ -178,15 +182,15 @@ struct SegmentListView: View {
                 }
             }
             .frame(width: eventColumnWidth ?? 200)
-            
+
             VStack(alignment: .leading, spacing: 0) {
                 if let selectedEvent = selectedEvent {
                     HStack(alignment: .center) {
                         Text("Event Details")
                             .font(.headline)
-                        
+
                         Spacer()
-                        
+
                         Text(ContentView.displayName(for: selectedEvent))
                             .font(.caption)
                             .padding(.horizontal, 8)
@@ -196,11 +200,14 @@ struct SegmentListView: View {
                     }
                     .frame(height: 44)
                     .padding(.horizontal, 16)
-                    
-                    JSONInspectorView(data: selectedEvent.data, onHighlightElement: nil, onFindInSource: nil, onFilterForNode: nil, onFilterForNodeAllReferences: nil, highlightPath: nil, searchQuery: nil)
-                        .id(selectedEvent.id)
-                        .padding(.horizontal, 16)
-                        .accessibilityIdentifier("event-details-json")
+
+                    JSONInspectorView(
+                        data: selectedEvent.data, onHighlightElement: nil, onFindInSource: nil, onFilterForNode: nil,
+                        onFilterForNodeAllReferences: nil, highlightPath: nil, searchQuery: nil
+                    )
+                    .id(selectedEvent.id)
+                    .padding(.horizontal, 16)
+                    .accessibilityIdentifier("event-details-json")
                 } else {
                     VStack {
                         Image(systemName: "curlybraces")
@@ -227,13 +234,13 @@ struct SegmentListView: View {
             selectFirstSegmentAndEvent()
         }
     }
-    
+
     private func selectFirstSegmentAndEvent() {
         guard let firstSegment = segments.first else { return }
         selectedSegment = firstSegment
         selectedEvent = firstSegment.events(useSortedOrder: useSortedOrder).first
     }
-    
+
     private func calculateColumnWidths() {
         // OPTIMIZATION: Sample first 50 segments instead of all for performance
         let sampleSize = min(50, segments.count)
@@ -258,14 +265,16 @@ struct SegmentListView: View {
             var durationWidth: CGFloat = 0
             let events = segment.sortedEvents  // OPTIMIZATION: Store in local variable
             if events.count > 1,
-               let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
-               let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }) {
-                let duration = formatDuration(lastEvent.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp))
+                let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
+                let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp })
+            {
+                let duration = formatDuration(
+                    lastEvent.effectiveTimestamp.timeIntervalSince(firstEvent.effectiveTimestamp))
                 // Icon width (approx 10pt) + spacing + text width
-                durationWidth = 10 + 2 + duration.widthOfString(usingFont: captionFont) + 8 // extra spacing
+                durationWidth = 10 + 2 + duration.widthOfString(usingFont: captionFont) + 8  // extra spacing
             }
 
-            let firstLineWidth = segmentTextWidth + durationWidth + timestampWidth + 32 // Spacers
+            let firstLineWidth = segmentTextWidth + durationWidth + timestampWidth + 32  // Spacers
 
             // Calculate second line width: size • event count + time diff
             let bytes = segment.approximateSize  // OPTIMIZATION: Now cached in model
@@ -292,9 +301,9 @@ struct SegmentListView: View {
                 timeDiffWidth = timeDiffText.widthOfString(usingFont: caption2Font)
             }
 
-            let secondLineWidth = sizeAndCountWidth + timeDiffWidth + 32 // Spacers
+            let secondLineWidth = sizeAndCountWidth + timeDiffWidth + 32  // Spacers
 
-            let totalWidth = max(firstLineWidth, secondLineWidth) + 32 // Additional padding
+            let totalWidth = max(firstLineWidth, secondLineWidth) + 32  // Additional padding
             maxSegmentWidth = max(maxSegmentWidth, totalWidth)
         }
         segmentColumnWidth = min(maxSegmentWidth, 500)
@@ -317,17 +326,18 @@ struct SegmentRowView: View {
     let isSelected: Bool
     let originalSegment: ReplaySegment?
     let previousSegment: ReplaySegment?
-    var onTimestampClick: ((Date) -> Void)? = nil
+    var onTimestampClick: ((Date) -> Void)?
     var selectedCount: Int = 1
-    var onExport: ((_ preserveSegments: Bool) -> Void)? = nil
-    var onCopyToClipboard: ((_ preserveSegments: Bool) -> Void)? = nil
+    var onExport: ((_ preserveSegments: Bool) -> Void)?
+    var onCopyToClipboard: ((_ preserveSegments: Bool) -> Void)?
 
     private var segmentDuration: String? {
         // OPTIMIZATION: Store sortedEvents in local variable to avoid repeated property access
         let events = (originalSegment ?? segment).sortedEvents
         guard events.count > 1,
-              let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
-              let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }) else {
+            let firstEvent = events.min(by: { $0.effectiveTimestamp < $1.effectiveTimestamp }),
+            let lastEvent = events.max(by: { $0.effectiveTimestamp < $1.effectiveTimestamp })
+        else {
             return nil
         }
 
@@ -503,7 +513,7 @@ struct EventRowView: View {
     let event: ReplayEvent
     let isSelected: Bool
     let previousEvent: ReplayEvent?
-    var onTimestampClick: ((Date) -> Void)? = nil
+    var onTimestampClick: ((Date) -> Void)?
 
     private var timeDifferenceFromPrevious: String? {
         guard let previous = previousEvent else { return nil }
@@ -545,8 +555,9 @@ struct EventRowView: View {
     private func extractMutationCount(from event: ReplayEvent) -> Int? {
         // Only check Mutation events (type 3, source 0)
         guard event.type == 3,
-              let source = event.data["source"] as? Int,
-              source == 0 else {
+            let source = event.data["source"] as? Int,
+            source == 0
+        else {
             return nil
         }
 
@@ -566,7 +577,8 @@ struct EventRowView: View {
                         if let mutationCount = extractMutationCount(from: event) {
                             let formatter = NumberFormatter()
                             let _ = { formatter.numberStyle = .decimal }()
-                            let formattedCount = formatter.string(from: NSNumber(value: mutationCount)) ?? "\(mutationCount)"
+                            let formattedCount =
+                                formatter.string(from: NSNumber(value: mutationCount)) ?? "\(mutationCount)"
 
                             Text(formattedCount)
                                 .font(.system(size: 11, weight: .medium))
@@ -575,7 +587,9 @@ struct EventRowView: View {
                                 .padding(.vertical, 2)
                                 .background(
                                     Capsule()
-                                        .fill(mutationCount > 5000 ? Color.red : (mutationCount > 1000 ? Color.orange : Color.secondary))
+                                        .fill(
+                                            mutationCount > 5000
+                                                ? Color.red : (mutationCount > 1000 ? Color.orange : Color.secondary))
                                 )
                         }
                     }
@@ -623,12 +637,12 @@ struct EventRowView: View {
         if event.type == 5, event.data["tag"] != nil {
             return "Custom"
         }
-        
+
         // Check if this is an incremental snapshot (type 3) with a source
         if event.type == 3, event.data["source"] != nil {
             return "IncrementalSnapshot"
         }
-        
+
         return nil
     }
 }
@@ -642,7 +656,7 @@ struct EventRowView: View {
             data: [
                 "selector": ".button-primary",
                 "mutation_type": "attributes",
-                "attribute": "class"
+                "attribute": "class",
             ]
         ),
         ReplayEvent(
@@ -652,11 +666,11 @@ struct EventRowView: View {
             data: [
                 "x": 150,
                 "y": 200,
-                "target": "button#submit"
+                "target": "button#submit",
             ]
-        )
+        ),
     ]
-    
+
     let mockSegments = [
         ReplaySegment(
             id: "segment-0",
@@ -664,7 +678,7 @@ struct EventRowView: View {
             events: mockEvents
         )
     ]
-    
+
     return SegmentListView(segments: mockSegments)
         .frame(width: 1000, height: 600)
 }

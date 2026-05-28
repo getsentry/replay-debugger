@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct HTMLSourceView: View {
     let html: String
@@ -116,7 +116,8 @@ struct AttributedTextView: NSViewRepresentable {
             // Highlight all matches
             for (index, range) in matches.enumerated() {
                 let isCurrentMatch = (index + 1) == currentMatchIndex
-                let backgroundColor = isCurrentMatch ? NSColor.systemYellow : NSColor.systemYellow.withAlphaComponent(0.3)
+                let backgroundColor =
+                    isCurrentMatch ? NSColor.systemYellow : NSColor.systemYellow.withAlphaComponent(0.3)
                 textView.textStorage?.addAttribute(.backgroundColor, value: backgroundColor, range: range)
             }
 
@@ -172,14 +173,16 @@ struct HTMLSyntaxHighlighter {
         // Set base font and color
         let baseFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         attributed.addAttribute(.font, value: baseFont, range: NSRange(location: 0, length: attributed.length))
-        attributed.addAttribute(.foregroundColor, value: textColor, range: NSRange(location: 0, length: attributed.length))
+        attributed.addAttribute(
+            .foregroundColor, value: textColor, range: NSRange(location: 0, length: attributed.length))
 
         let htmlString = html as NSString
 
         // Highlight comments
         let commentPattern = "<!--[\\s\\S]*?-->"
         if let commentRegex = try? NSRegularExpression(pattern: commentPattern, options: []) {
-            let matches = commentRegex.matches(in: html, options: [], range: NSRange(location: 0, length: htmlString.length))
+            let matches = commentRegex.matches(
+                in: html, options: [], range: NSRange(location: 0, length: htmlString.length))
             for match in matches {
                 attributed.addAttribute(.foregroundColor, value: commentColor, range: match.range)
             }
@@ -188,7 +191,8 @@ struct HTMLSyntaxHighlighter {
         // Highlight DOCTYPE
         let doctypePattern = "<!DOCTYPE[^>]*>"
         if let doctypeRegex = try? NSRegularExpression(pattern: doctypePattern, options: [.caseInsensitive]) {
-            let matches = doctypeRegex.matches(in: html, options: [], range: NSRange(location: 0, length: htmlString.length))
+            let matches = doctypeRegex.matches(
+                in: html, options: [], range: NSRange(location: 0, length: htmlString.length))
             for match in matches {
                 attributed.addAttribute(.foregroundColor, value: tagColor, range: match.range)
             }
@@ -197,7 +201,8 @@ struct HTMLSyntaxHighlighter {
         // Highlight tags and attributes
         let tagPattern = "</?[a-zA-Z][^>]*>"
         if let tagRegex = try? NSRegularExpression(pattern: tagPattern, options: []) {
-            let matches = tagRegex.matches(in: html, options: [], range: NSRange(location: 0, length: htmlString.length))
+            let matches = tagRegex.matches(
+                in: html, options: [], range: NSRange(location: 0, length: htmlString.length))
 
             for match in matches {
                 let tagRange = match.range
@@ -209,21 +214,26 @@ struct HTMLSyntaxHighlighter {
                 // Highlight attributes within the tag
                 let attributePattern = "\\s([a-zA-Z-]+)\\s*=\\s*\"([^\"]*)\""
                 if let attrRegex = try? NSRegularExpression(pattern: attributePattern, options: []) {
-                    let attrMatches = attrRegex.matches(in: tagString, options: [], range: NSRange(location: 0, length: tagString.count))
+                    let attrMatches = attrRegex.matches(
+                        in: tagString, options: [], range: NSRange(location: 0, length: tagString.count))
 
                     for attrMatch in attrMatches {
                         // Attribute name
                         if attrMatch.numberOfRanges > 1 {
                             let nameRange = attrMatch.range(at: 1)
-                            let absoluteNameRange = NSRange(location: tagRange.location + nameRange.location, length: nameRange.length)
-                            attributed.addAttribute(.foregroundColor, value: attributeNameColor, range: absoluteNameRange)
+                            let absoluteNameRange = NSRange(
+                                location: tagRange.location + nameRange.location, length: nameRange.length)
+                            attributed.addAttribute(
+                                .foregroundColor, value: attributeNameColor, range: absoluteNameRange)
                         }
 
                         // Attribute value
                         if attrMatch.numberOfRanges > 2 {
                             let valueRange = attrMatch.range(at: 2)
-                            let absoluteValueRange = NSRange(location: tagRange.location + valueRange.location, length: valueRange.length)
-                            attributed.addAttribute(.foregroundColor, value: attributeValueColor, range: absoluteValueRange)
+                            let absoluteValueRange = NSRange(
+                                location: tagRange.location + valueRange.location, length: valueRange.length)
+                            attributed.addAttribute(
+                                .foregroundColor, value: attributeValueColor, range: absoluteValueRange)
                         }
                     }
                 }

@@ -21,8 +21,9 @@ struct UserProfile: Codable {
         }
         // Legacy format: nested avatar object
         else if let avatar = json["avatar"] as? [String: Any],
-                let avatarUrl = avatar["avatarUrl"] as? String,
-                !avatarUrl.isEmpty {
+            let avatarUrl = avatar["avatarUrl"] as? String,
+            !avatarUrl.isEmpty
+        {
             if avatarUrl.hasPrefix("http") {
                 self.avatarURL = URL(string: avatarUrl)
             } else {

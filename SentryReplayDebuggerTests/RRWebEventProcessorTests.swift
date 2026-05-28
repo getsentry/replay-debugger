@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import SentryReplayDebugger
 
 final class RRWebEventProcessorTests: XCTestCase {
@@ -100,7 +101,7 @@ final class RRWebEventProcessorTests: XCTestCase {
             "id": 1,
             "tagName": "div",
             "attributes": [:],
-            "childNodes": []
+            "childNodes": [],
         ]
         let event = ReplayEvent(id: "1", type: 2, timestamp: now, data: ["node": nodeData])
         let events = [event]
@@ -121,7 +122,7 @@ final class RRWebEventProcessorTests: XCTestCase {
             "id": 1,
             "tagName": "div",
             "attributes": [:],
-            "childNodes": []
+            "childNodes": [],
         ]
         let fullSnapshotEvent = ReplayEvent(id: "1", type: 2, timestamp: now, data: ["node": nodeData])
         let customEvent = ReplayEvent(id: "2", type: 5, timestamp: now.addingTimeInterval(1), data: [:])
@@ -139,19 +140,22 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessEvents_WithMeta() {
         // Given
         let now = Date()
-        let metaEvent = ReplayEvent(id: "1", type: 4, timestamp: now, data: [
-            "width": 1920,
-            "height": 1080,
-            "href": "https://example.com"
-        ])
+        let metaEvent = ReplayEvent(
+            id: "1", type: 4, timestamp: now,
+            data: [
+                "width": 1920,
+                "height": 1080,
+                "href": "https://example.com",
+            ])
         let nodeData: [String: Any] = [
             "type": 2,
             "id": 1,
             "tagName": "div",
             "attributes": [:],
-            "childNodes": []
+            "childNodes": [],
         ]
-        let fullSnapshotEvent = ReplayEvent(id: "2", type: 2, timestamp: now.addingTimeInterval(1), data: ["node": nodeData])
+        let fullSnapshotEvent = ReplayEvent(
+            id: "2", type: 2, timestamp: now.addingTimeInterval(1), data: ["node": nodeData])
 
         let events = [metaEvent, fullSnapshotEvent]
 
@@ -174,7 +178,7 @@ final class RRWebEventProcessorTests: XCTestCase {
             "id": 1,
             "tagName": "div",
             "attributes": [:],
-            "childNodes": []
+            "childNodes": [],
         ]
         let event2 = ReplayEvent(id: "2", type: 2, timestamp: now.addingTimeInterval(1), data: ["node": nodeData])
 
@@ -218,7 +222,8 @@ final class RRWebEventProcessorTests: XCTestCase {
         let events: [ReplayEvent] = []
 
         // When
-        let newState = RRWebEventProcessor.processEventsIncremental(events, from: 0, to: -1, startingState: startingState)
+        let newState = RRWebEventProcessor.processEventsIncremental(
+            events, from: 0, to: -1, startingState: startingState)
 
         // Then - Should be a deep copy, not the same object
         XCTAssertNotNil(newState.domTree)
@@ -232,15 +237,18 @@ final class RRWebEventProcessorTests: XCTestCase {
         let doc = DOMDocumentNode(id: 1)
         startingState.domTree = doc
 
-        let metaEvent = ReplayEvent(id: "1", type: 4, timestamp: now, data: [
-            "width": 1024,
-            "height": 768
-        ])
+        let metaEvent = ReplayEvent(
+            id: "1", type: 4, timestamp: now,
+            data: [
+                "width": 1024,
+                "height": 768,
+            ])
 
         let events = [metaEvent]
 
         // When
-        let newState = RRWebEventProcessor.processEventsIncremental(events, from: 0, to: 0, startingState: startingState)
+        let newState = RRWebEventProcessor.processEventsIncremental(
+            events, from: 0, to: 0, startingState: startingState)
 
         // Then
         XCTAssertEqual(newState.viewportWidth, 1024)
@@ -252,11 +260,13 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessMeta() {
         // Given
         let now = Date()
-        let metaEvent = ReplayEvent(id: "1", type: 4, timestamp: now, data: [
-            "width": 1920,
-            "height": 1080,
-            "href": "https://test.com"
-        ])
+        let metaEvent = ReplayEvent(
+            id: "1", type: 4, timestamp: now,
+            data: [
+                "width": 1920,
+                "height": 1080,
+                "href": "https://test.com",
+            ])
 
         // When
         let state = RRWebEventProcessor.processEvents([metaEvent], upToIndex: 0)
@@ -270,9 +280,11 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessMeta_PartialData() {
         // Given - Only width provided
         let now = Date()
-        let metaEvent = ReplayEvent(id: "1", type: 4, timestamp: now, data: [
-            "width": 800
-        ])
+        let metaEvent = ReplayEvent(
+            id: "1", type: 4, timestamp: now,
+            data: [
+                "width": 800
+            ])
 
         // When
         let state = RRWebEventProcessor.processEvents([metaEvent], upToIndex: 0)
@@ -292,38 +304,42 @@ final class RRWebEventProcessorTests: XCTestCase {
         let body = DOMElementNode(id: 1, tagName: "body")
         doc.appendChild(body)
 
-        let fullSnapshotEvent = ReplayEvent(id: "1", type: 2, timestamp: now, data: [
-            "node": [
-                "type": 0,
-                "id": 0,
-                "childNodes": [
-                    [
-                        "type": 2,
-                        "id": 1,
-                        "tagName": "body",
-                        "attributes": [:],
-                        "childNodes": []
-                    ]
+        let fullSnapshotEvent = ReplayEvent(
+            id: "1", type: 2, timestamp: now,
+            data: [
+                "node": [
+                    "type": 0,
+                    "id": 0,
+                    "childNodes": [
+                        [
+                            "type": 2,
+                            "id": 1,
+                            "tagName": "body",
+                            "attributes": [:],
+                            "childNodes": [],
+                        ]
+                    ],
                 ]
-            ]
-        ])
+            ])
 
         // Mutation event to add a div
-        let mutationEvent = ReplayEvent(id: "2", type: 3, timestamp: now.addingTimeInterval(1), data: [
-            "source": 0, // Mutation
-            "adds": [
-                [
-                    "parentId": 1,
-                    "node": [
-                        "type": 2,
-                        "id": 2,
-                        "tagName": "div",
-                        "attributes": ["class": "new"],
-                        "childNodes": []
+        let mutationEvent = ReplayEvent(
+            id: "2", type: 3, timestamp: now.addingTimeInterval(1),
+            data: [
+                "source": 0,  // Mutation
+                "adds": [
+                    [
+                        "parentId": 1,
+                        "node": [
+                            "type": 2,
+                            "id": 2,
+                            "tagName": "div",
+                            "attributes": ["class": "new"],
+                            "childNodes": [],
+                        ],
                     ]
-                ]
-            ]
-        ])
+                ],
+            ])
 
         let events = [fullSnapshotEvent, mutationEvent]
 
@@ -342,40 +358,44 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessMutation_RemoveNode() {
         // Given - Setup initial DOM with a node to remove
         let now = Date()
-        let fullSnapshotEvent = ReplayEvent(id: "1", type: 2, timestamp: now, data: [
-            "node": [
-                "type": 0,
-                "id": 0,
-                "childNodes": [
-                    [
-                        "type": 2,
-                        "id": 1,
-                        "tagName": "body",
-                        "attributes": [:],
-                        "childNodes": [
-                            [
-                                "type": 2,
-                                "id": 2,
-                                "tagName": "div",
-                                "attributes": [:],
-                                "childNodes": []
-                            ]
+        let fullSnapshotEvent = ReplayEvent(
+            id: "1", type: 2, timestamp: now,
+            data: [
+                "node": [
+                    "type": 0,
+                    "id": 0,
+                    "childNodes": [
+                        [
+                            "type": 2,
+                            "id": 1,
+                            "tagName": "body",
+                            "attributes": [:],
+                            "childNodes": [
+                                [
+                                    "type": 2,
+                                    "id": 2,
+                                    "tagName": "div",
+                                    "attributes": [:],
+                                    "childNodes": [],
+                                ]
+                            ],
                         ]
-                    ]
+                    ],
                 ]
-            ]
-        ])
+            ])
 
         // Mutation event to remove the div
-        let mutationEvent = ReplayEvent(id: "2", type: 3, timestamp: now.addingTimeInterval(1), data: [
-            "source": 0, // Mutation
-            "removes": [
-                [
-                    "id": 2,
-                    "parentId": 1
-                ]
-            ]
-        ])
+        let mutationEvent = ReplayEvent(
+            id: "2", type: 3, timestamp: now.addingTimeInterval(1),
+            data: [
+                "source": 0,  // Mutation
+                "removes": [
+                    [
+                        "id": 2,
+                        "parentId": 1,
+                    ]
+                ],
+            ])
 
         let events = [fullSnapshotEvent, mutationEvent]
 
@@ -391,38 +411,42 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessMutation_TextUpdate() {
         // Given - Setup initial DOM with text node
         let now = Date()
-        let fullSnapshotEvent = ReplayEvent(id: "1", type: 2, timestamp: now, data: [
-            "node": [
-                "type": 0,
-                "id": 0,
-                "childNodes": [
-                    [
-                        "type": 2,
-                        "id": 1,
-                        "tagName": "div",
-                        "attributes": [:],
-                        "childNodes": [
-                            [
-                                "type": 3,
-                                "id": 2,
-                                "textContent": "Old text"
-                            ]
+        let fullSnapshotEvent = ReplayEvent(
+            id: "1", type: 2, timestamp: now,
+            data: [
+                "node": [
+                    "type": 0,
+                    "id": 0,
+                    "childNodes": [
+                        [
+                            "type": 2,
+                            "id": 1,
+                            "tagName": "div",
+                            "attributes": [:],
+                            "childNodes": [
+                                [
+                                    "type": 3,
+                                    "id": 2,
+                                    "textContent": "Old text",
+                                ]
+                            ],
                         ]
-                    ]
+                    ],
                 ]
-            ]
-        ])
+            ])
 
         // Mutation event to update text
-        let mutationEvent = ReplayEvent(id: "2", type: 3, timestamp: now.addingTimeInterval(1), data: [
-            "source": 0, // Mutation
-            "texts": [
-                [
-                    "id": 2,
-                    "value": "New text"
-                ]
-            ]
-        ])
+        let mutationEvent = ReplayEvent(
+            id: "2", type: 3, timestamp: now.addingTimeInterval(1),
+            data: [
+                "source": 0,  // Mutation
+                "texts": [
+                    [
+                        "id": 2,
+                        "value": "New text",
+                    ]
+                ],
+            ])
 
         let events = [fullSnapshotEvent, mutationEvent]
 
@@ -437,35 +461,39 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessMutation_AttributeUpdate() {
         // Given - Setup initial DOM
         let now = Date()
-        let fullSnapshotEvent = ReplayEvent(id: "1", type: 2, timestamp: now, data: [
-            "node": [
-                "type": 0,
-                "id": 0,
-                "childNodes": [
-                    [
-                        "type": 2,
-                        "id": 1,
-                        "tagName": "div",
-                        "attributes": ["class": "old"],
-                        "childNodes": []
-                    ]
+        let fullSnapshotEvent = ReplayEvent(
+            id: "1", type: 2, timestamp: now,
+            data: [
+                "node": [
+                    "type": 0,
+                    "id": 0,
+                    "childNodes": [
+                        [
+                            "type": 2,
+                            "id": 1,
+                            "tagName": "div",
+                            "attributes": ["class": "old"],
+                            "childNodes": [],
+                        ]
+                    ],
                 ]
-            ]
-        ])
+            ])
 
         // Mutation event to update attribute
-        let mutationEvent = ReplayEvent(id: "2", type: 3, timestamp: now.addingTimeInterval(1), data: [
-            "source": 0, // Mutation
-            "attributes": [
-                [
-                    "id": 1,
-                    "attributes": [
-                        "class": "new",
-                        "id": "test"
+        let mutationEvent = ReplayEvent(
+            id: "2", type: 3, timestamp: now.addingTimeInterval(1),
+            data: [
+                "source": 0,  // Mutation
+                "attributes": [
+                    [
+                        "id": 1,
+                        "attributes": [
+                            "class": "new",
+                            "id": "test",
+                        ],
                     ]
-                ]
-            ]
-        ])
+                ],
+            ])
 
         let events = [fullSnapshotEvent, mutationEvent]
 
@@ -481,34 +509,38 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessMutation_AttributeUpdate_RRWidth() {
         // Given - Setup initial DOM
         let now = Date()
-        let fullSnapshotEvent = ReplayEvent(id: "1", type: 2, timestamp: now, data: [
-            "node": [
-                "type": 0,
-                "id": 0,
-                "childNodes": [
-                    [
-                        "type": 2,
-                        "id": 1,
-                        "tagName": "div",
-                        "attributes": [:],
-                        "childNodes": []
-                    ]
+        let fullSnapshotEvent = ReplayEvent(
+            id: "1", type: 2, timestamp: now,
+            data: [
+                "node": [
+                    "type": 0,
+                    "id": 0,
+                    "childNodes": [
+                        [
+                            "type": 2,
+                            "id": 1,
+                            "tagName": "div",
+                            "attributes": [:],
+                            "childNodes": [],
+                        ]
+                    ],
                 ]
-            ]
-        ])
+            ])
 
         // Mutation event with rr_width
-        let mutationEvent = ReplayEvent(id: "2", type: 3, timestamp: now.addingTimeInterval(1), data: [
-            "source": 0, // Mutation
-            "attributes": [
-                [
-                    "id": 1,
-                    "attributes": [
-                        "rr_width": "100"
+        let mutationEvent = ReplayEvent(
+            id: "2", type: 3, timestamp: now.addingTimeInterval(1),
+            data: [
+                "source": 0,  // Mutation
+                "attributes": [
+                    [
+                        "id": 1,
+                        "attributes": [
+                            "rr_width": "100"
+                        ],
                     ]
-                ]
-            ]
-        ])
+                ],
+            ])
 
         let events = [fullSnapshotEvent, mutationEvent]
 
@@ -523,34 +555,38 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessMutation_AttributeUpdate_CSSText() {
         // Given - Setup initial DOM with link element
         let now = Date()
-        let fullSnapshotEvent = ReplayEvent(id: "1", type: 2, timestamp: now, data: [
-            "node": [
-                "type": 0,
-                "id": 0,
-                "childNodes": [
-                    [
-                        "type": 2,
-                        "id": 1,
-                        "tagName": "link",
-                        "attributes": [:],
-                        "childNodes": []
-                    ]
+        let fullSnapshotEvent = ReplayEvent(
+            id: "1", type: 2, timestamp: now,
+            data: [
+                "node": [
+                    "type": 0,
+                    "id": 0,
+                    "childNodes": [
+                        [
+                            "type": 2,
+                            "id": 1,
+                            "tagName": "link",
+                            "attributes": [:],
+                            "childNodes": [],
+                        ]
+                    ],
                 ]
-            ]
-        ])
+            ])
 
         // Mutation event with _cssText
-        let mutationEvent = ReplayEvent(id: "2", type: 3, timestamp: now.addingTimeInterval(1), data: [
-            "source": 0, // Mutation
-            "attributes": [
-                [
-                    "id": 1,
-                    "attributes": [
-                        "_cssText": ".test { color: red; }"
+        let mutationEvent = ReplayEvent(
+            id: "2", type: 3, timestamp: now.addingTimeInterval(1),
+            data: [
+                "source": 0,  // Mutation
+                "attributes": [
+                    [
+                        "id": 1,
+                        "attributes": [
+                            "_cssText": ".test { color: red; }"
+                        ],
                     ]
-                ]
-            ]
-        ])
+                ],
+            ])
 
         let events = [fullSnapshotEvent, mutationEvent]
 
@@ -568,28 +604,32 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessStyleSheetRule_Replace() {
         // Given - Setup initial DOM with style element
         let now = Date()
-        let fullSnapshotEvent = ReplayEvent(id: "1", type: 2, timestamp: now, data: [
-            "node": [
-                "type": 0,
-                "id": 0,
-                "childNodes": [
-                    [
-                        "type": 2,
-                        "id": 1,
-                        "tagName": "style",
-                        "attributes": [:],
-                        "childNodes": []
-                    ]
+        let fullSnapshotEvent = ReplayEvent(
+            id: "1", type: 2, timestamp: now,
+            data: [
+                "node": [
+                    "type": 0,
+                    "id": 0,
+                    "childNodes": [
+                        [
+                            "type": 2,
+                            "id": 1,
+                            "tagName": "style",
+                            "attributes": [:],
+                            "childNodes": [],
+                        ]
+                    ],
                 ]
-            ]
-        ])
+            ])
 
         // StyleSheetRule event to replace CSS
-        let styleSheetEvent = ReplayEvent(id: "2", type: 3, timestamp: now.addingTimeInterval(1), data: [
-            "source": 8, // StyleSheetRule
-            "id": 1,
-            "replace": ".new { color: blue; }"
-        ])
+        let styleSheetEvent = ReplayEvent(
+            id: "2", type: 3, timestamp: now.addingTimeInterval(1),
+            data: [
+                "source": 8,  // StyleSheetRule
+                "id": 1,
+                "replace": ".new { color: blue; }",
+            ])
 
         let events = [fullSnapshotEvent, styleSheetEvent]
 
@@ -605,35 +645,39 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testProcessStyleSheetRule_AddRule() {
         // Given - Setup initial DOM with style element
         let now = Date()
-        let fullSnapshotEvent = ReplayEvent(id: "1", type: 2, timestamp: now, data: [
-            "node": [
-                "type": 0,
-                "id": 0,
-                "childNodes": [
-                    [
-                        "type": 2,
-                        "id": 1,
-                        "tagName": "style",
-                        "attributes": [
-                            "_cssText": ".old {}"
-                        ],
-                        "childNodes": []
-                    ]
+        let fullSnapshotEvent = ReplayEvent(
+            id: "1", type: 2, timestamp: now,
+            data: [
+                "node": [
+                    "type": 0,
+                    "id": 0,
+                    "childNodes": [
+                        [
+                            "type": 2,
+                            "id": 1,
+                            "tagName": "style",
+                            "attributes": [
+                                "_cssText": ".old {}"
+                            ],
+                            "childNodes": [],
+                        ]
+                    ],
                 ]
-            ]
-        ])
+            ])
 
         // StyleSheetRule event to add CSS rule
-        let styleSheetEvent = ReplayEvent(id: "2", type: 3, timestamp: now.addingTimeInterval(1), data: [
-            "source": 8, // StyleSheetRule
-            "id": 1,
-            "adds": [
-                [
-                    "rule": ".new { color: red; }",
-                    "index": 0
-                ]
-            ]
-        ])
+        let styleSheetEvent = ReplayEvent(
+            id: "2", type: 3, timestamp: now.addingTimeInterval(1),
+            data: [
+                "source": 8,  // StyleSheetRule
+                "id": 1,
+                "adds": [
+                    [
+                        "rule": ".new { color: red; }",
+                        "index": 0,
+                    ]
+                ],
+            ])
 
         let events = [fullSnapshotEvent, styleSheetEvent]
 
@@ -656,7 +700,7 @@ final class RRWebEventProcessorTests: XCTestCase {
         let state = RRWebEventProcessor.processEvents([event], upToIndex: 0)
 
         // Then
-        XCTAssertNil(state.domTree) // Should not affect state
+        XCTAssertNil(state.domTree)  // Should not affect state
     }
 
     func testProcessEvents_Load() {
@@ -668,7 +712,7 @@ final class RRWebEventProcessorTests: XCTestCase {
         let state = RRWebEventProcessor.processEvents([event], upToIndex: 0)
 
         // Then
-        XCTAssertNil(state.domTree) // Should not affect state
+        XCTAssertNil(state.domTree)  // Should not affect state
     }
 
     func testProcessEvents_Plugin() {
@@ -680,7 +724,7 @@ final class RRWebEventProcessorTests: XCTestCase {
         let state = RRWebEventProcessor.processEvents([event], upToIndex: 0)
 
         // Then
-        XCTAssertNil(state.domTree) // Should not affect state
+        XCTAssertNil(state.domTree)  // Should not affect state
     }
 
     // MARK: - Complex Integration Tests
@@ -688,42 +732,48 @@ final class RRWebEventProcessorTests: XCTestCase {
     func testCompleteEventSequence() {
         // Given - A complete sequence of events
         let now = Date()
-        let metaEvent = ReplayEvent(id: "1", type: 4, timestamp: now, data: [
-            "width": 1920,
-            "height": 1080
-        ])
+        let metaEvent = ReplayEvent(
+            id: "1", type: 4, timestamp: now,
+            data: [
+                "width": 1920,
+                "height": 1080,
+            ])
 
-        let fullSnapshotEvent = ReplayEvent(id: "2", type: 2, timestamp: now.addingTimeInterval(1), data: [
-            "node": [
-                "type": 0,
-                "id": 0,
-                "childNodes": [
+        let fullSnapshotEvent = ReplayEvent(
+            id: "2", type: 2, timestamp: now.addingTimeInterval(1),
+            data: [
+                "node": [
+                    "type": 0,
+                    "id": 0,
+                    "childNodes": [
+                        [
+                            "type": 2,
+                            "id": 1,
+                            "tagName": "body",
+                            "attributes": [:],
+                            "childNodes": [],
+                        ]
+                    ],
+                ]
+            ])
+
+        let addMutationEvent = ReplayEvent(
+            id: "3", type: 3, timestamp: now.addingTimeInterval(2),
+            data: [
+                "source": 0,
+                "adds": [
                     [
-                        "type": 2,
-                        "id": 1,
-                        "tagName": "body",
-                        "attributes": [:],
-                        "childNodes": []
+                        "parentId": 1,
+                        "node": [
+                            "type": 2,
+                            "id": 2,
+                            "tagName": "div",
+                            "attributes": ["class": "container"],
+                            "childNodes": [],
+                        ],
                     ]
-                ]
-            ]
-        ])
-
-        let addMutationEvent = ReplayEvent(id: "3", type: 3, timestamp: now.addingTimeInterval(2), data: [
-            "source": 0,
-            "adds": [
-                [
-                    "parentId": 1,
-                    "node": [
-                        "type": 2,
-                        "id": 2,
-                        "tagName": "div",
-                        "attributes": ["class": "container"],
-                        "childNodes": []
-                    ]
-                ]
-            ]
-        ])
+                ],
+            ])
 
         let events = [metaEvent, fullSnapshotEvent, addMutationEvent]
 

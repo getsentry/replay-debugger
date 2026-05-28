@@ -113,7 +113,7 @@ final class HTMLRendererViewUITests: XCTestCase {
         let renderedButton = picker.buttons["Rendered"]
         if renderedButton.exists {
             renderedButton.tap()
-            sleep(2) // Wait for HTML to render
+            sleep(2)  // Wait for HTML to render
 
             // Then: Rendered view should exist
             let renderedView = app.otherElements["html-rendered-view"]

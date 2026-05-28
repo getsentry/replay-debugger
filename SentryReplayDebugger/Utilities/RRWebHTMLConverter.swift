@@ -7,7 +7,7 @@ struct RRWebHTMLConverter {
     /// - Parameter event: The ReplayEvent with type 2 (FullSnapshot)
     /// - Returns: Root DOMNode of the tree
     static func convertToDOMTree(_ event: ReplayEvent) -> DOMNode? {
-        guard event.type == 2 else { // EventType.FullSnapshot
+        guard event.type == 2 else {  // EventType.FullSnapshot
             return nil
         }
 
@@ -17,7 +17,8 @@ struct RRWebHTMLConverter {
         if let directNode = event.data["node"] as? [String: Any] {
             node = directNode
         } else if let data = event.data["data"] as? [String: Any],
-                  let nestedNode = data["node"] as? [String: Any] {
+            let nestedNode = data["node"] as? [String: Any]
+        {
             node = nestedNode
         }
 
@@ -47,17 +48,17 @@ struct RRWebHTMLConverter {
         let id = node["id"] as? Int ?? -1
 
         switch type {
-        case 0: // Document node
+        case 0:  // Document node
             return buildDocumentNode(from: node, id: id)
-        case 1: // DocumentType node
+        case 1:  // DocumentType node
             return buildDocumentTypeNode(from: node, id: id)
-        case 2: // Element node
+        case 2:  // Element node
             return buildElementNode(from: node, id: id)
-        case 3: // Text node
+        case 3:  // Text node
             return buildTextNode(from: node, id: id)
-        case 4: // CDATA node
+        case 4:  // CDATA node
             return buildCDATANode(from: node, id: id)
-        case 5: // Comment node
+        case 5:  // Comment node
             return buildCommentNode(from: node, id: id)
         default:
             return nil
@@ -125,7 +126,7 @@ struct RRWebHTMLConverter {
             } else if let numValue = value as? NSNumber {
                 attributes[key] = "\(numValue)"
             } else if let boolValue = value as? Bool, boolValue {
-                attributes[key] = key // Boolean attribute
+                attributes[key] = key  // Boolean attribute
             }
         }
 

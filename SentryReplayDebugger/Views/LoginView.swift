@@ -65,10 +65,12 @@ struct LoginView: View {
 }
 
 #Preview("Login - Error") {
-    LoginView(authService: {
-        let service = AuthService.shared
-        service.errorMessage = "Unable to connect to Sentry"
-        return service
-    }())
+    LoginView(
+        authService: {
+            let service = AuthService.shared
+            service.errorMessage = "Unable to connect to Sentry"
+            return service
+        }()
+    )
     .frame(width: 500, height: 450)
 }

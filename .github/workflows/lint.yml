@@ -1,0 +1,26 @@
+name: Lint
+
+on:
+  workflow_call:
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: swift-format & SwiftLint
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: swift-format (strict)
+        run: |
+          xcrun swift-format lint --strict --recursive \
+            --configuration .swift-format \
+            SentryReplayDebugger SentryReplayDebuggerTests SentryReplayDebuggerUITests
+
+      - name: SwiftLint
+        run: swiftlint lint --config .swiftlint.yml --reporter github-actions-logging

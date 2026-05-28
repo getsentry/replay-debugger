@@ -1,5 +1,5 @@
-import Foundation
 import AuthenticationServices
+import Foundation
 
 enum AuthError: LocalizedError {
     case invalidCallbackURL
@@ -96,7 +96,8 @@ class AuthService: ObservableObject {
 
         let callbackScheme = URL(string: redirectURI)?.scheme ?? "sentry-replay-debugger"
 
-        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackScheme) { [weak self] callbackURL, error in
+        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackScheme) {
+            [weak self] callbackURL, error in
             Task { @MainActor in
                 guard let self else { return }
                 self.isLoading = false
@@ -130,7 +131,8 @@ class AuthService: ObservableObject {
 
     private func handleCallback(url: URL) async {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let code = components.queryItems?.first(where: { $0.name == "code" })?.value else {
+            let code = components.queryItems?.first(where: { $0.name == "code" })?.value
+        else {
             errorMessage = AuthError.missingAuthCode.localizedDescription
             return
         }
@@ -192,7 +194,8 @@ class AuthService: ObservableObject {
 
     func isTokenExpired(bufferSeconds: TimeInterval = 60) -> Bool {
         guard let expiryString = KeychainHelper.loadString(key: Self.tokenExpiryKey),
-              let expiryInterval = Double(expiryString) else {
+            let expiryInterval = Double(expiryString)
+        else {
             // No expiry stored — assume valid (server may not send expires_in)
             return false
         }
@@ -233,7 +236,8 @@ class AuthService: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
+            httpResponse.statusCode == 200
+        else {
             throw AuthError.tokenExchangeFailed("Refresh failed")
         }
 

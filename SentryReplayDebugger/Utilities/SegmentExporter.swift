@@ -17,7 +17,7 @@ struct SegmentExporter {
                 [
                     "type": event.type,
                     "timestamp": Int(event.timestamp.timeIntervalSince1970 * 1000),
-                    "data": event.data
+                    "data": event.data,
                 ]
             }
         }.sorted { first, second in
@@ -41,14 +41,14 @@ struct SegmentExporter {
                 [
                     "type": event.type,
                     "timestamp": Int(event.timestamp.timeIntervalSince1970 * 1000),
-                    "data": event.data
+                    "data": event.data,
                 ]
             }
 
             return [
                 "id": segment.id,
                 "timestamp": Int(segment.timestamp.timeIntervalSince1970 * 1000),
-                "events": events
+                "events": events,
             ]
         }
 
@@ -72,7 +72,8 @@ struct SegmentExporter {
             guard response == .OK, let url = panel.url else { return }
 
             do {
-                let data = preserveSegments
+                let data =
+                    preserveSegments
                     ? try serializeWithSegments(segments)
                     : try serializeFlattened(segments)
                 try data.write(to: url)
@@ -86,7 +87,8 @@ struct SegmentExporter {
         guard !segments.isEmpty else { return }
 
         do {
-            let data = preserveSegments
+            let data =
+                preserveSegments
                 ? try serializeWithSegments(segments)
                 : try serializeFlattened(segments)
 

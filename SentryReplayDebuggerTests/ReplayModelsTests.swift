@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import SentryReplayDebugger
 
 final class ReplaySegmentTests: XCTestCase {
@@ -246,7 +247,7 @@ final class ReplayEventTests: XCTestCase {
         let data: [String: Any] = [
             "nested": ["inner": "value"],
             "array": [1, 2, 3],
-            "bool": true
+            "bool": true,
         ]
 
         // When
@@ -362,7 +363,7 @@ final class ReplayEventTests: XCTestCase {
 
     func testTimestamp_FutureDate() {
         // Given
-        let futureDate = Date(timeIntervalSince1970: 2000000000)
+        let futureDate = Date(timeIntervalSince1970: 2_000_000_000)
         let event = ReplayEvent(id: "event-1", type: 2, timestamp: futureDate, data: [:])
 
         // Then
