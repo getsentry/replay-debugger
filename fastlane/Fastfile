@@ -1,5 +1,7 @@
 # Fastfile
 
+require "json"
+
 default_platform(:mac)
 
 platform :mac do
@@ -65,13 +67,28 @@ platform :mac do
 
       UI.message("Attempting to notarize: #{temp_zip}")
 
-      sh(
-        "xcrun notarytool submit #{temp_zip} " \
-        "--key #{api_key_path} " \
-        "--key-id #{ENV['APP_STORE_CONNECT_KEY_ID']} " \
-        "--issuer #{ENV['APP_STORE_CONNECT_ISSUER_ID']} " \
-        "--wait"
+      creds = "--key #{api_key_path} " \
+              "--key-id #{ENV['APP_STORE_CONNECT_KEY_ID']} " \
+              "--issuer #{ENV['APP_STORE_CONNECT_ISSUER_ID']}"
+
+      submit_output = sh(
+        "xcrun notarytool submit #{temp_zip} #{creds} --wait --output-format json",
+        log: false
       )
+      json_text = submit_output[/\{.*\}/m]
+      UI.user_error!("Could not parse notarytool output:\n#{submit_output}") if json_text.nil?
+      result = JSON.parse(json_text)
+      submission_id = result["id"]
+      status = result["status"]
+      UI.message("Notarization submission #{submission_id}: #{status}")
+
+      # notarytool can exit 0 even when a submission is Invalid; an Invalid submission
+      # produces no ticket, which otherwise surfaces as a confusing stapler failure
+      # ("Could not find base64 encoded ticket"). Dump the log and fail loudly instead.
+      unless status == "Accepted"
+        sh("xcrun notarytool log #{submission_id} #{creds}") if submission_id
+        UI.user_error!("Notarization failed with status: #{status}")
+      end
 
       UI.success("Notarization completed.")
 
@@ -112,6 +129,49 @@ platform :mac do
     sh("cd '#{app_dir}' && zip -r --symlinks '#{zip_path}' '#{app_name}'")
 
     UI.success("Created #{zip_path}.")
+  end
+
+  desc "Re-sign Sparkle's nested helpers with Developer ID + hardened runtime"
+  lane :codesign_sparkle do |options|
+    # Sparkle ships its XPC services, Updater.app, and Autoupdate ad-hoc signed. Xcode
+    # re-signs the top-level framework binary on embed but not these nested helpers, so they
+    # stay ad-hoc and notarization is rejected (which surfaces later as a stapler failure:
+    # "Could not find base64 encoded ticket"). Re-sign them inside-out with the Developer ID
+    # identity + hardened runtime + secure timestamp, then re-seal the framework and app.
+    identity = options[:identity] || "Developer ID Application"
+    app_path = Dir.chdir('..') do
+      File.expand_path(options[:app_path] || "build/Release/SentryReplayDebugger.app")
+    end
+    UI.user_error!("App not found at #{app_path}. Build first.") unless File.directory?(app_path)
+
+    sparkle = "#{app_path}/Contents/Frameworks/Sparkle.framework"
+    unless File.directory?(sparkle)
+      UI.message("Sparkle.framework not embedded; nothing to re-sign.")
+      next
+    end
+
+    # Resolve the framework's current version directory (e.g. Versions/B).
+    current = "#{sparkle}/Versions/Current"
+    vdir = File.symlink?(current) ? File.expand_path(File.readlink(current), File.dirname(current)) : current
+
+    # Preserve each component's existing (Xcode-substituted) entitlements; only assert
+    # hardened runtime + timestamp. Re-applying the raw .entitlements file would leave
+    # $(PRODUCT_BUNDLE_IDENTIFIER) build variables unsubstituted.
+    sign = "codesign --force --options runtime --timestamp --preserve-metadata=entitlements --sign '#{identity}'"
+
+    nested = [
+      "#{vdir}/Autoupdate",
+      "#{vdir}/Updater.app",
+      "#{vdir}/XPCServices/Downloader.xpc",
+      "#{vdir}/XPCServices/Installer.xpc",
+    ]
+    nested.each { |path| sh("#{sign} '#{path}'") if File.exist?(path) }
+    sh("#{sign} '#{sparkle}'")
+    sh("#{sign} '#{app_path}'")
+
+    # Fail loudly if anything is still ad-hoc/unsigned before we hand off to notarization.
+    sh("codesign --verify --deep --strict --verbose=2 '#{app_path}'")
+    UI.success("Re-signed Sparkle helpers and resealed #{File.basename(app_path)}.")
   end
 
   desc "Generate and EdDSA-sign the Sparkle appcast for a release build"

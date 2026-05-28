@@ -69,6 +69,16 @@ jobs:
           OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
         run: bundle exec fastlane build_release
 
+      # Sparkle ships its nested helpers (XPC services, Updater.app, Autoupdate) ad-hoc
+      # signed; Xcode does not re-sign them on embed, so notarization rejects the app.
+      # Re-sign them with Developer ID + hardened runtime before notarizing.
+      - name: Re-sign Sparkle helpers
+        env:
+          FASTLANE_KEYCHAIN_PASSWORD: ${{ secrets.FASTLANE_KEYCHAIN_PASSWORD }}
+          MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: bundle exec fastlane codesign_sparkle
+
       - name: Notarize app
         if: inputs.notarize
         env:
