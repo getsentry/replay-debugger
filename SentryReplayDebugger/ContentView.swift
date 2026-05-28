@@ -1624,23 +1624,19 @@ struct ContentView: View {
             let jsonObject = try JSONSerialization.jsonObject(with: jsonData)
 
             if let outerArray = jsonObject as? [Any] {
-                var parsedSegments: [ReplaySegment] = []
-
-                for (index, item) in outerArray.enumerated() {
-                    if let eventsArray = item as? [[String: Any]] {
-                        let segment = createSegmentFromEvents(eventsArray, id: "segment-\(index)")
-                        parsedSegments.append(segment)
-                    }
-                }
-
-                if !parsedSegments.isEmpty {
-                    segments = parsedSegments
-                    errorMessage = nil
-                } else if let eventsArray = jsonObject as? [[String: Any]] {
-                    segments = [createSegmentFromEvents(eventsArray, id: "segment-0")]
-                    errorMessage = nil
-                } else if let segmentsArray = jsonObject as? [[String: Any]] {
+                if let firstDict = outerArray.first as? [String: Any],
+                   firstDict["id"] != nil || firstDict["segment_id"] != nil,
+                   let segmentsArray = outerArray as? [[String: Any]]
+                {
                     segments = parseSegmentsFromClipboard(segmentsArray)
+                    errorMessage = nil
+                } else if let nestedArrays = outerArray as? [[[String: Any]]] {
+                    segments = nestedArrays.enumerated().map { index, events in
+                        createSegmentFromEvents(events, id: "segment-\(index)")
+                    }
+                    errorMessage = nil
+                } else if let eventsArray = outerArray as? [[String: Any]] {
+                    segments = [createSegmentFromEvents(eventsArray, id: "segment-0")]
                     errorMessage = nil
                 }
             } else if let singleSegment = jsonObject as? [String: Any] {
