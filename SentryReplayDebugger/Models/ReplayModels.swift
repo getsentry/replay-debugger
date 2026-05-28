@@ -38,7 +38,7 @@ struct ReplaySegment: Identifiable, Equatable, Hashable {
                     "id": event.id,
                     "type": event.type,
                     "timestamp": event.timestamp.timeIntervalSince1970,
-                    "data": event.data
+                    "data": event.data,
                 ]
             }
             let jsonData = try JSONSerialization.data(withJSONObject: eventsData, options: [])
@@ -76,27 +76,9 @@ struct ReplayEvent: Identifiable, Hashable {
     var effectiveTimestamp: Date {
         // Check if there's an endTimestamp in the data
         if let endTimestamp = data["endTimestamp"] as? TimeInterval {
-            return parseTimestamp(endTimestamp) ?? timestamp
+            return ReplayTimestamp.date(fromEpoch: endTimestamp)
         }
         return timestamp
-    }
-
-    private func parseTimestamp(_ value: TimeInterval) -> Date? {
-        // Check if timestamp is in milliseconds
-        // Use a more reasonable threshold: Jan 1, 2020 in seconds (1577836800)
-        if value > 1577836800 {
-            // Could be milliseconds - check if it's way too large for seconds
-            if value > 1577836800000 {
-                // Definitely milliseconds, convert to seconds
-                return Date(timeIntervalSince1970: value / 1000)
-            } else {
-                // Likely seconds (between 2020-2050 range)
-                return Date(timeIntervalSince1970: value)
-            }
-        } else {
-            // Old timestamp, likely seconds
-            return Date(timeIntervalSince1970: value)
-        }
     }
 
     static func == (lhs: ReplayEvent, rhs: ReplayEvent) -> Bool {
@@ -108,4 +90,3 @@ struct ReplayEvent: Identifiable, Hashable {
         hasher.combine(timestamp)
     }
 }
-

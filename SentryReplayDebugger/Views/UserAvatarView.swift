@@ -33,14 +33,15 @@ struct UserAvatarView: View {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 nsImage = NSImage(data: data)
             } catch {
+                NSLog("⚠️ Failed to load avatar from \(url): \(error.localizedDescription)")
                 nsImage = nil
             }
         }
     }
 }
 
-private extension NSImage {
-    func rounded(size: CGFloat, cornerRadius: CGFloat) -> NSImage {
+extension NSImage {
+    fileprivate func rounded(size: CGFloat, cornerRadius: CGFloat) -> NSImage {
         let targetSize = NSSize(width: size, height: size)
         let result = NSImage(size: targetSize)
         result.lockFocus()
