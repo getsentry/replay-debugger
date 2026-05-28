@@ -1,3 +1,13 @@
+## 0.2.2
+
+### New Features ✨
+
+- (updates) Add Sparkle auto-update via GitHub release appcast by @billyvg in [#29](https://github.com/getsentry/replay-debugger/pull/29)
+
+### Bug Fixes 🐛
+
+- (updates) Re-sign Sparkle nested helpers for notarization by @billyvg in [#30](https://github.com/getsentry/replay-debugger/pull/30)
+
 ## 0.2.0
 
 ### New Features ✨
