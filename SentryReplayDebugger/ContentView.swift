@@ -504,6 +504,9 @@ struct ContentView: View {
                 return event
             }
         }
+        .onOpenURL { url in
+            handleDeepLink(url)
+        }
         .onChange(of: segments) {
             // Clear render state cache when data changes
             htmlRenderStateCache = [:]
@@ -1606,6 +1609,51 @@ struct ContentView: View {
         }
     }
 
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "sentry-replay-debugger", url.host == "open" else { return }
+        loadFromClipboard()
+    }
+
+    private func loadFromJSON(_ jsonString: String) {
+        guard let jsonData = jsonString.data(using: .utf8) else {
+            errorMessage = "Invalid JSON encoding"
+            return
+        }
+
+        do {
+            let jsonObject = try JSONSerialization.jsonObject(with: jsonData)
+
+            if let outerArray = jsonObject as? [Any] {
+                var parsedSegments: [ReplaySegment] = []
+
+                for (index, item) in outerArray.enumerated() {
+                    if let eventsArray = item as? [[String: Any]] {
+                        let segment = createSegmentFromEvents(eventsArray, id: "segment-\(index)")
+                        parsedSegments.append(segment)
+                    }
+                }
+
+                if !parsedSegments.isEmpty {
+                    segments = parsedSegments
+                    errorMessage = nil
+                } else if let eventsArray = jsonObject as? [[String: Any]] {
+                    segments = [createSegmentFromEvents(eventsArray, id: "segment-0")]
+                    errorMessage = nil
+                } else if let segmentsArray = jsonObject as? [[String: Any]] {
+                    segments = parseSegmentsFromClipboard(segmentsArray)
+                    errorMessage = nil
+                }
+            } else if let singleSegment = jsonObject as? [String: Any] {
+                segments = parseSegmentsFromClipboard([singleSegment])
+                errorMessage = nil
+            } else {
+                errorMessage = "Invalid JSON format - expected segment or event data"
+            }
+        } catch {
+            errorMessage = "Invalid JSON: \(error.localizedDescription)"
+        }
+    }
+
     private func fetchReplayFromURL(_ url: String) {
         let urlComponents: SentryURLComponents
         do {
@@ -1663,47 +1711,7 @@ struct ContentView: View {
             return
         }
 
-        // Otherwise, treat as JSON
-        guard let jsonData = clipboardText.data(using: .utf8) else {
-            errorMessage = "Invalid text format in clipboard"
-            return
-        }
-
-        do {
-            let jsonObject = try JSONSerialization.jsonObject(with: jsonData)
-
-            if let outerArray = jsonObject as? [Any] {
-                // Check if it's an array of arrays of events [[events...], [events...]]
-                var parsedSegments: [ReplaySegment] = []
-
-                for (index, item) in outerArray.enumerated() {
-                    if let eventsArray = item as? [[String: Any]] {
-                        let segment = createSegmentFromEvents(eventsArray, id: "segment-\(index)")
-                        parsedSegments.append(segment)
-                    }
-                }
-
-                if !parsedSegments.isEmpty {
-                    segments = parsedSegments
-                    errorMessage = nil
-                } else if let eventsArray = jsonObject as? [[String: Any]] {
-                    // Handle direct array of events
-                    segments = [createSegmentFromEvents(eventsArray, id: "segment-0")]
-                    errorMessage = nil
-                } else if let segmentsArray = jsonObject as? [[String: Any]] {
-                    // Handle array of segment objects
-                    segments = parseSegmentsFromClipboard(segmentsArray)
-                    errorMessage = nil
-                }
-            } else if let singleSegment = jsonObject as? [String: Any] {
-                segments = parseSegmentsFromClipboard([singleSegment])
-                errorMessage = nil
-            } else {
-                errorMessage = "Invalid JSON format - expected segment or event data"
-            }
-        } catch {
-            errorMessage = "Invalid JSON in clipboard: \(error.localizedDescription)"
-        }
+        loadFromJSON(clipboardText)
     }
 
     private func loadFromCURLCommand(_ curlCommand: String) {
